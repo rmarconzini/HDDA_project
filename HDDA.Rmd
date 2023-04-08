@@ -15,6 +15,11 @@ library(stringr)
 library(ggplot2)
 library(plotly)
 library(gmodels)
+library(rpart)      
+library(caret) 
+library(rpart.plot)  
+library(vip)         
+library(pdp) 
 
 options(scipen = 100)
 data<- read.csv("/Users/lorenzobruni/Desktop/WA_Fn-UseC_-Telco-Customer-Churn.csv")
@@ -25,6 +30,32 @@ data<-na.omit(data)
 dim(data)
 str(data)
 ```
+
+```{r, echo=FALSE}
+summary(data)
+sd(data$tenure)
+```
+
+
+```{r, echo=FALSE}
+ggplot(data = data, aes(x = "", y = tenure)) + 
+  geom_boxplot(width = 0.4, fill = "white") +
+  labs(title = 'Tenure distribution',
+       y='Tenure',x='')+
+  coord_cartesian()
+```
+
+```{r, echo=FALSE}
+df <- data %>%
+  group_by(Churn) %>%
+  summarise(counts = n())
+
+ggplot(df, aes(x = Churn, y = counts)) +
+  geom_bar(fill = "#0073C2FF", stat = "identity") +
+  geom_text(aes(label = counts), vjust = -0.3) + 
+  labs(title = 'Churn distribution')
+```
+
 
 ```{r, echo=FALSE}
 ggplot(data = data, aes(x=Churn,y=tenure, fill=Churn)) + 
@@ -60,34 +91,70 @@ cor(corr, method = "pearson", use = "complete.obs")
 ggplot(data, aes(TotalCharges,tenure))+geom_point()+geom_smooth(method=lm)
 ```
 
-```{r, echo=FALSE}
-ggplot(data=data,aes(x=Churn, y=count)) + 
-  geom_bar(stat ='identity')+
-  scale_fill_brewer(palette="Blues")+
-  coord_flip() + 
-  theme_grey() + 
-  labs(title = 'Proportion of churn',x='Churn')
-```
+
 
 Allora teniamo solo la variabile TotalCharges
 Teniamo esclusivamente la variabile Phoneservice ed escludiamo Multiple lines perchè influenzata dai valori di questa
 Teniamo esclusivamente la variabile internetservice ed escludiamo le altre poichè influenzate da quest'ultima
 
-```{r }
+We can fit a regression tree using rpart and then visualize it using rpart.plot. The fitting process and the visual output of regression trees and classification trees are very similar. Both use the formula method for expressing the model (similar to lm()).
+```{r, echo=FALSE }
 data <- subset(data,select=-c(customerID, Churn, MultipleLines, OnlineSecurity, OnlineBackup, DeviceProtection, MonthlyCharges, TechSupport, StreamingTV, StreamingMovies))
 set.seed(1234)
 split <- sample(nrow(data), floor(0.7*nrow(data)))
-traindf <- diabetes[split,]
-testdf <-  diabetes[-split,]
-
-fit <- lm(tenure ~ ., data = traindf)
-preds <- predict(fit, testdf[,predictorNames], se.fit = TRUE)
+traindf <- data[split,]
+testdf <-  data[-split,]
 ```
 
 
+```{r, echo=FALSE }
+fit <- rpart(
+  formula = tenure ~ .,
+  data    = traindf,
+  method  = "anova"
+)
+```
+
+The first variable we split on (i.e., the first variable gave the largest reduction in SSE) is TotalCharges.
+
+We can visualize our tree model with rpart.plot(). However, in the default print it will show the percentage of data that fall in each node and the predicted outcome for that node. One thing you may notice is that this tree contains 9 internal nodes resulting in 10 terminal nodes.
+```{r, echo=FALSE}
+rpart.plot(fit)
+```
+Diagram displaying the pruned decision tree for the Churn data.
+Behind the scenes rpart() is automatically applying a range of cost complexity ( α values to prune the tree). To compare the error for each α value, rpart() performs a 10-fold CV (by default).
 
 ```{r, echo=FALSE}
-plot(pressure)
+plotcp(fit)
 ```
+Pruning complexity parameter (cp) plot illustrating the relative cross validation error (y-axis) for various cp values (lower x-axis). Smaller cp values lead to larger trees (upper x-axis). 
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r, echo=FALSE}
+preds <- predict(fit, testdf)
+rmse <- RMSE(
+   pred = preds,
+   obs = testdf$tenure
+)
+rmse
+```
+The pruning process leads to an average prediction error of 7.2 in the test data set. This is not bad considering the standard deviation for that variable as seen above is 24.5.
+
+To measure feature importance, the reduction in the loss function (e.g., SSE) attributed to each variable at each split is tabulated. In some instances, a single variable could be used multiple times in a tree; consequently, the total reduction in the loss function across all splits by a variable are summed up and used as the total feature importance. Decision trees perform automated feature selection where uninformative features are not used in the model.
+```{r, echo=FALSE}
+vip(fit,  bar = FALSE)
+```
+Variable importance based on the total reduction in cross-validated SSE for the tenure decision tree.
+
+Decision trees have a number of advantages. Trees require very little pre-processing. This is not to say feature engineering may not improve upon a decision tree, but rather, that there are no pre-processing requirements. Outliers typically do not bias the results as much since the binary partitioning simply looks for a single location to make a split within the distribution of each feature. Decision trees can easily handle categorical features without preprocessing. However, individual decision trees generally do not often achieve state-of-the-art predictive accuracy.
+
+```{r, echo=FALSE}
+set.seed(1234)
+oj_mdl_bag <- train(
+   Purchase ~ ., 
+   data = oj_train, 
+   method = "treebag",
+   trControl = oj_trControl,
+   metric = "ROC"
+)
+oj_mdl_bag$finalModel
+```

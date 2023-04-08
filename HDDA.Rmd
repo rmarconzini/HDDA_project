@@ -1,0 +1,93 @@
+---
+title: "Untitled"
+author: "Lorenzo"
+date: "2023-04-07"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(httr)
+library(jsonlite)
+library(odbc)
+library(dplyr) 
+library(lubridate)
+library(stringr) 
+library(ggplot2)
+library(plotly)
+library(gmodels)
+
+options(scipen = 100)
+data<- read.csv("/Users/lorenzobruni/Desktop/WA_Fn-UseC_-Telco-Customer-Churn.csv")
+data<-na.omit(data)
+```
+
+```{r, echo=FALSE}
+dim(data)
+str(data)
+```
+
+```{r, echo=FALSE}
+ggplot(data = data, aes(x=Churn,y=tenure, fill=Churn)) + 
+  geom_boxplot()+
+  scale_fill_brewer(palette="Green") + 
+  labs(title = 'Churn vs tenure',
+       y='tenure',x='Churn')
+```
+
+```{r, echo=FALSE}
+ggplot(data = data, aes(x=Churn,y=TotalCharges, fill=Churn)) + 
+  geom_boxplot()+
+  scale_fill_brewer(palette="Green") + 
+  labs(title = 'Churn vs TotalCharges',
+       y='TotalCharges',x='Churn')
+```
+
+```{r, echo=FALSE}
+ggplot(data = data, aes(x=Churn,y=MonthlyCharges, fill=Churn)) + 
+  geom_boxplot()+
+  scale_fill_brewer(palette="Green") + 
+  labs(title = 'Churn vs MonthlyCharges',
+       y='MonthlyCharges',x='Churn')
+```
+
+
+```{r, echo=FALSE}
+corr<- data[, c("MonthlyCharges", "TotalCharges", "tenure")]
+cor(corr, method = "pearson", use = "complete.obs")
+```
+
+```{r, echo=FALSE}
+ggplot(data, aes(TotalCharges,tenure))+geom_point()+geom_smooth(method=lm)
+```
+
+```{r, echo=FALSE}
+ggplot(data=data,aes(x=Churn, y=count)) + 
+  geom_bar(stat ='identity')+
+  scale_fill_brewer(palette="Blues")+
+  coord_flip() + 
+  theme_grey() + 
+  labs(title = 'Proportion of churn',x='Churn')
+```
+
+Allora teniamo solo la variabile TotalCharges
+Teniamo esclusivamente la variabile Phoneservice ed escludiamo Multiple lines perchè influenzata dai valori di questa
+Teniamo esclusivamente la variabile internetservice ed escludiamo le altre poichè influenzate da quest'ultima
+
+```{r }
+data <- subset(data,select=-c(customerID, Churn, MultipleLines, OnlineSecurity, OnlineBackup, DeviceProtection, MonthlyCharges, TechSupport, StreamingTV, StreamingMovies))
+set.seed(1234)
+split <- sample(nrow(data), floor(0.7*nrow(data)))
+traindf <- diabetes[split,]
+testdf <-  diabetes[-split,]
+
+fit <- lm(tenure ~ ., data = traindf)
+preds <- predict(fit, testdf[,predictorNames], se.fit = TRUE)
+```
+
+
+
+```{r, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

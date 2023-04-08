@@ -20,6 +20,11 @@ library(caret)
 library(rpart.plot)  
 library(vip)         
 library(pdp) 
+library(tibble)
+library(forcats)
+library(doParallel) 
+library(foreach)
+library(scorecard)
 
 options(scipen = 100)
 data<- read.csv("/Users/lorenzobruni/Desktop/WA_Fn-UseC_-Telco-Customer-Churn.csv")
@@ -141,20 +146,59 @@ The pruning process leads to an average prediction error of 7.2 in the test data
 
 To measure feature importance, the reduction in the loss function (e.g., SSE) attributed to each variable at each split is tabulated. In some instances, a single variable could be used multiple times in a tree; consequently, the total reduction in the loss function across all splits by a variable are summed up and used as the total feature importance. Decision trees perform automated feature selection where uninformative features are not used in the model.
 ```{r, echo=FALSE}
-vip(fit,  bar = FALSE)
+fit$variable.importance %>% 
+   data.frame() %>%
+   rownames_to_column(var = "Feature") %>%
+   rename(Overall = '.') %>%
+   ggplot(aes(x = fct_reorder(Feature, Overall), y = Overall)) +
+   geom_pointrange(aes(ymin = 0, ymax = Overall), color = "cadetblue", size = .3) +
+   theme_minimal() +
+   coord_flip() +
+   labs(x = "", y = "", title = "Variable Importance with Simple Regression")
 ```
 Variable importance based on the total reduction in cross-validated SSE for the tenure decision tree.
 
 Decision trees have a number of advantages. Trees require very little pre-processing. This is not to say feature engineering may not improve upon a decision tree, but rather, that there are no pre-processing requirements. Outliers typically do not bias the results as much since the binary partitioning simply looks for a single location to make a split within the distribution of each feature. Decision trees can easily handle categorical features without preprocessing. However, individual decision trees generally do not often achieve state-of-the-art predictive accuracy.
 
+
+Bootstrap aggregating (bagging) prediction models is a general method for fitting multiple versions of a prediction model and then combining (or ensembling) them into an aggregated prediction. Bagging is a fairly straight forward algorithm in which b bootstrap copies of the original training data are created, the regression or classification algorithm (commonly referred to as the base learner) is applied to each bootstrap sample and, in the regression context, new predictions are made by averaging the predictions together from the individual base learners. When dealing with a classification problem, the base learner predictions are combined using plurality vote or by averaging the estimated class probabilities together. Because of the aggregation process, bagging effectively reduces the variance of an individual base learner (i.e., averaging reduces variance); however, bagging does not always improve upon an individual base learner.Bagging works especially well for unstable, high variance base learners—algorithms whose predicted output undergoes major changes in response to small changes in the training data.This includes algorithms such as decision trees and KNN (when k is sufficiently small). However, for algorithms that are more stable or have high bias, bagging offers less improvement on predicted outputs since there is less variability.
+Optimal performance is often found by bagging 50–500 trees. Data sets that have a few strong predictors typically require less trees; whereas data sets with lots of noise or multiple strong predictors may need more. Using too many trees will not lead to overfitting. However, it’s important to realize that since multiple models are being run, the more iterations you perform the more computational and time requirements you will have. As these demands increase, performing k-fold CV can become computationally burdensome. 
+A benefit to creating ensembles via bagging, which is based on resampling with replacement, is that it can provide its own internal estimate of predictive performance with the out-of-bag (OOB) sample. The OOB sample can be used to test predictive performance and the results usually compare well compared to k-fold CV assuming your data set is sufficiently large (say n ≥ 1000). Consequently, as your data sets become larger and your bagging iterations increase, it is common to use the OOB error estimate as a proxy for predictive performance.
+
+Rather than use a single pruned decision tree, we can use, say, 100 bagged unpruned trees (by not pruning the trees we’re keeping bias low and variance high which is when bagging will have the biggest effect). One thing to note is that typically, the more trees the better. As we add more trees we’re averaging over more high variance decision trees. Early on, we see a dramatic reduction in variance (and hence our error) but eventually the error will typically flatline and stabilize signaling that a suitable number of trees has been reached. Often, we need only 50–100 trees to stabilize the error (in other cases we may need 500 or more).
 ```{r, echo=FALSE}
 set.seed(1234)
-oj_mdl_bag <- train(
-   Purchase ~ ., 
-   data = oj_train, 
+bag_model <- train(
+   tenure ~ ., 
+   data = traindf, 
+   nbagg = 100,
+   trControl = trainControl(method = "cv", number = 10),
    method = "treebag",
-   trControl = oj_trControl,
-   metric = "ROC"
-)
-oj_mdl_bag$finalModel
+   control = rpart.control(minsplit = 2, cp = 0)
+   )
+bag_model
 ```
+The process of bagging involves fitting models to each of the bootstrap samples which are completely independent of one another. This means that each model can be trained in parallel and the results aggregated in the end for the final model. Consequently, if you have access to a large cluster or number of cores, you can more quickly create bagged ensembles on larger data sets.
+
+```{r, echo=FALSE}
+cs_preds_bag <- bind_cols(
+   Predicted = predict(bag_model, newdata = testdf),
+   Actual = testdf$tenure
+)
+(cs_rmse_bag <- RMSE(pred = cs_preds_bag$Predicted, obs = cs_preds_bag$Actual))
+```
+
+Unfortunately, due to the bagging process, models that are normally perceived as interpretable are no longer so. However, we can still make inferences about how features are influencing our model. For bagged decision trees, this process is similar to the one of the decision tree. For each tree, we compute the sum of the reduction of the loss function across all splits. We then aggregate this measure across all trees for each feature. The features with the largest average decrease in SSE (for regression) are considered most important. 
+```{r, echo=FALSE}
+plot(varImp(bag_model), main="Variable Importance with Bagging")
+```
+
+```{r, echo=FALSE}
+cs_scoreboard <- rbind(data.frame(Model = "Single Tree", RMSE = rmse),
+   data.frame(Model = "Bagging", RMSE = cs_rmse_bag)
+) %>% arrange(RMSE)
+cs_scoreboard
+```
+
+Bagging improves the prediction accuracy for high variance (and low bias) models at the expense of interpretability and computational speed. However, using various interpretability algorithms, we can still make inferences about how our bagged model leverages feature information. Also, since bagging consists of independent processes, the algorithm is easily parallelizable.
+However, when bagging trees, a problem still exists. Although the model building steps are independent, the trees in bagging are not completely independent of each other since all the original features are considered at every split of every tree. Rather, trees from different bootstrap samples typically have similar structure to each other (especially at the top of the tree) due to any underlying strong relationships. This characteristic is known as tree correlation and prevents bagging from further reducing the variance of the base learner. Random forests extend and improve upon bagged decision trees by reducing this correlation and thereby improving the accuracy of the overall ensemble.

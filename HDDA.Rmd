@@ -5,13 +5,26 @@ date: "2023-04-07"
 output: pdf_document
 ---
 
-```{r setup, include=FALSE}
-library(httr)
-library(jsonlite)
-library(odbc)
+# Abstract
+
+
+L'obiettivo di questo progetto è approfondire la procedura di bagging. Al fine di approfondire il funzionamento di questa tecnica è stata effettuata un'implementazione in R, sia per l'obiettivo di classificazione che per quello di regressione. Per implementare il bagging è stato utilizzato il pacchetto caret. Il lavoro è stato così strutturato: una preliminare fase di analisi esplorativa del dataset, una seconda fase di selezione delle features sulla base di alcune caratteristiche di esse e successivamente testing e valutazione dei modelli. Come algoritmi sono stati scelti gli alberi di decisione come weak learner e le stime ottenute da essi sono state poi confrontate con quelle ottenute dal bagging al fine di valutare i benefici di tale tecnica.  
+
+
+# Introduzione
+
+
+Il bagging, o bootstrap aggregation, è una procedura utilizzata per ridurre la varianza di un metodo di apprendimento statistico. Tale tecnica si basa sul concetto di bootstrap, una procedura di ricampionamento che crea b nuovi bootstrap samples, campioni con reinserinento provenienti dal training set, e attraverso questi è possibile valutare l'accuratezza della stima di un parametro o di una previsione. Il bagging sfrutta proprio tale procedura per migliorare le stime o la stessa previsione. Il bagging è designato per migliorare appunto la stabilità e accuratezza degli algoritmi di regressione e classificazione. Mediante la media del modello il bagging riesce a ridurre la varianza e minimizzare l'overfitting. I bootstrap aggregating (bagging) prediction models sono metodi generali per addestrare molteplici versioni di un modello di previsione e poi combinare (ensembling) queste in un unica previsione aggregata. 
+Esso viene solitamente applicato agli alberi decisionali, ma tuttavia può essere utilizzato con ogni altro metodo.
+
+
+# Prerequisiti
+
+Faremo uso dei seguenti pacchetti per effettuare l'analisi sul dataset.
+
+```{r setup}
 library(dplyr) 
 library(lubridate)
-library(stringr) 
 library(ggplot2)
 library(plotly)
 library(gmodels)
@@ -26,10 +39,11 @@ library(doParallel)
 library(foreach)
 library(scorecard)
 
-options(scipen = 100)
 data<- read.csv("/Users/lorenzobruni/Desktop/WA_Fn-UseC_-Telco-Customer-Churn.csv")
 data<-na.omit(data)
 ```
+
+#Analisi esplorativa
 
 ```{r, echo=FALSE}
 dim(data)
@@ -40,6 +54,7 @@ str(data)
 summary(data)
 sd(data$tenure)
 ```
+
 
 
 ```{r, echo=FALSE}
@@ -96,11 +111,16 @@ cor(corr, method = "pearson", use = "complete.obs")
 ggplot(data, aes(TotalCharges,tenure))+geom_point()+geom_smooth(method=lm)
 ```
 
+Data la dipendenza tra le variabili TotalCharges e MonthlyCharges, decidiamo di escludere una delle due variabili e teniamo per l'analisi la variabile TotalCharges.
+
+Ragionamento simile per le variabili Phoneservice e MultipleLines nel quale la seconda è inevitabilmente legata ai valori assunti dalla prima. Decidiamo così di includere nell'analisi solo la variabile Phoneservice.
+
+Lo stesso ragionamento è stato effettuato per quanto riguarda il legame tra la variabile InternetService e le variabili OnlineSecurity, OnlineBackup, DeviceProtection, MonthlyCharges, TechSupport, StreamingTV, StreamingMovies. Anche in questo caso decidiamo di tenere in considerazione esclusivamente la variabile InternetService poichè i valori assunti dalle altre variabili risultano influenzati dai valori di quest'ultima.
 
 
-Allora teniamo solo la variabile TotalCharges
-Teniamo esclusivamente la variabile Phoneservice ed escludiamo Multiple lines perchè influenzata dai valori di questa
-Teniamo esclusivamente la variabile internetservice ed escludiamo le altre poichè influenzate da quest'ultima
+#Analisi di Regressione
+
+L'analisi di regressione viene effetuata cercando di preveedere i valori assunti dalla variabile tenure rispetto alle altre variabili. 
 
 We can fit a regression tree using rpart and then visualize it using rpart.plot. The fitting process and the visual output of regression trees and classification trees are very similar. Both use the formula method for expressing the model (similar to lm()).
 ```{r, echo=FALSE }
@@ -112,7 +132,7 @@ testdf <-  data[-split,]
 ```
 
 
-```{r, echo=FALSE }
+```{r}
 fit <- rpart(
   formula = tenure ~ .,
   data    = traindf,
@@ -166,7 +186,7 @@ Optimal performance is often found by bagging 50–500 trees. Data sets that hav
 A benefit to creating ensembles via bagging, which is based on resampling with replacement, is that it can provide its own internal estimate of predictive performance with the out-of-bag (OOB) sample. The OOB sample can be used to test predictive performance and the results usually compare well compared to k-fold CV assuming your data set is sufficiently large (say n ≥ 1000). Consequently, as your data sets become larger and your bagging iterations increase, it is common to use the OOB error estimate as a proxy for predictive performance.
 
 Rather than use a single pruned decision tree, we can use, say, 100 bagged unpruned trees (by not pruning the trees we’re keeping bias low and variance high which is when bagging will have the biggest effect). One thing to note is that typically, the more trees the better. As we add more trees we’re averaging over more high variance decision trees. Early on, we see a dramatic reduction in variance (and hence our error) but eventually the error will typically flatline and stabilize signaling that a suitable number of trees has been reached. Often, we need only 50–100 trees to stabilize the error (in other cases we may need 500 or more).
-```{r, echo=FALSE}
+```{r}
 set.seed(1234)
 bag_model <- train(
    tenure ~ ., 

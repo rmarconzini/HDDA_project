@@ -15,6 +15,7 @@ L'obiettivo di questo progetto è approfondire la procedura di bagging. Al fine 
 
 
 Il bagging, o bootstrap aggregation, è una procedura utilizzata per ridurre la varianza di un metodo di apprendimento statistico. Tale tecnica si basa sul concetto di bootstrap, una procedura di ricampionamento che crea b nuovi bootstrap samples, campioni con reinserinento provenienti dal training set, e attraverso questi è possibile valutare l'accuratezza della stima di un parametro o di una previsione. Il bagging sfrutta proprio tale procedura per migliorare le stime o la stessa previsione. Il bagging è designato per migliorare appunto la stabilità e accuratezza degli algoritmi di regressione e classificazione. Mediante la media del modello il bagging riesce a ridurre la varianza e minimizzare l'overfitting. I bootstrap aggregating (bagging) prediction models sono metodi generali per addestrare molteplici versioni di un modello di previsione e poi combinare (ensembling) queste in un unica previsione aggregata. 
+...
 Esso viene solitamente applicato agli alberi decisionali, ma tuttavia può essere utilizzato con ogni altro metodo.
 
 
@@ -120,9 +121,9 @@ Lo stesso ragionamento è stato effettuato per quanto riguarda il legame tra la 
 
 #Analisi di Regressione
 
-L'analisi di regressione viene effetuata cercando di preveedere i valori assunti dalla variabile tenure rispetto alle altre variabili. 
+L'analisi di regressione viene effetuata cercando di prevedere i valori assunti dalla variabile tenure rispetto alle altre variabili. 
 
-We can fit a regression tree using rpart and then visualize it using rpart.plot. The fitting process and the visual output of regression trees and classification trees are very similar. Both use the formula method for expressing the model (similar to lm()).
+
 ```{r, echo=FALSE }
 data <- subset(data,select=-c(customerID, Churn, MultipleLines, OnlineSecurity, OnlineBackup, DeviceProtection, MonthlyCharges, TechSupport, StreamingTV, StreamingMovies))
 set.seed(1234)
@@ -132,6 +133,8 @@ testdf <-  data[-split,]
 ```
 
 
+Come detto in precedenza il modello semplice che decidiamo di utilizzare come weak-learner è l'albero decisionale. Per la costruzione dell'albero di regressione usiamo la funzione rpart() contenuta nel pacchetto rpart, dopodiché per la visualizzazione dell'albero utilizziamo la funzione rpart.plot(). Il processo di addestramento e visualizzazione del modello è molto simile sia per la parte di regressione che per quella di classificazione.
+
 ```{r}
 fit <- rpart(
   formula = tenure ~ .,
@@ -140,19 +143,22 @@ fit <- rpart(
 )
 ```
 
-The first variable we split on (i.e., the first variable gave the largest reduction in SSE) is TotalCharges.
 
-We can visualize our tree model with rpart.plot(). However, in the default print it will show the percentage of data that fall in each node and the predicted outcome for that node. One thing you may notice is that this tree contains 9 internal nodes resulting in 10 terminal nodes.
 ```{r, echo=FALSE}
 rpart.plot(fit)
 ```
-Diagram displaying the pruned decision tree for the Churn data.
-Behind the scenes rpart() is automatically applying a range of cost complexity ( α values to prune the tree). To compare the error for each α value, rpart() performs a 10-fold CV (by default).
+
+La variabile che decreta il primo split (la prima variaile è quella che retituisce la più grande riduzione nel SSE) è TotalCharges.
+
+Visualizzando il modello ad albero con rpart.plot(), una cosa che si può notare è che l'albero contiene 9 nodi interni e 10 risultanti nodi terminali. 
+
+Di default rpart() automaticamente applica un range di valori di cost complexity ( α values per potare l'albero). Per confrontare l'errore associato a ciascun α value, rpart() performa un 10-fold CV.
 
 ```{r, echo=FALSE}
 plotcp(fit)
 ```
-Pruning complexity parameter (cp) plot illustrating the relative cross validation error (y-axis) for various cp values (lower x-axis). Smaller cp values lead to larger trees (upper x-axis). 
+
+Il grafico di pruning complexity parameter (cp) illustra il relativo cross validation error (y-axis) per vari cp values (lower x-axis). Piccoli valori di cp portano ad alberi più grandi (upper x-axis). 
 
 ```{r, echo=FALSE}
 preds <- predict(fit, testdf)
@@ -162,6 +168,7 @@ rmse <- RMSE(
 )
 rmse
 ```
+
 The pruning process leads to an average prediction error of 7.2 in the test data set. This is not bad considering the standard deviation for that variable as seen above is 24.5.
 
 To measure feature importance, the reduction in the loss function (e.g., SSE) attributed to each variable at each split is tabulated. In some instances, a single variable could be used multiple times in a tree; consequently, the total reduction in the loss function across all splits by a variable are summed up and used as the total feature importance. Decision trees perform automated feature selection where uninformative features are not used in the model.
@@ -219,6 +226,8 @@ cs_scoreboard <- rbind(data.frame(Model = "Single Tree", RMSE = rmse),
 ) %>% arrange(RMSE)
 cs_scoreboard
 ```
+
+# Conclusioni
 
 Bagging improves the prediction accuracy for high variance (and low bias) models at the expense of interpretability and computational speed. However, using various interpretability algorithms, we can still make inferences about how our bagged model leverages feature information. Also, since bagging consists of independent processes, the algorithm is easily parallelizable.
 However, when bagging trees, a problem still exists. Although the model building steps are independent, the trees in bagging are not completely independent of each other since all the original features are considered at every split of every tree. Rather, trees from different bootstrap samples typically have similar structure to each other (especially at the top of the tree) due to any underlying strong relationships. This characteristic is known as tree correlation and prevents bagging from further reducing the variance of the base learner. Random forests extend and improve upon bagged decision trees by reducing this correlation and thereby improving the accuracy of the overall ensemble.

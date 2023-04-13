@@ -8,13 +8,13 @@ output: pdf_document
 # Abstract
 
 
-L'obiettivo di questo progetto è approfondire la procedura di bagging. Al fine di approfondire il funzionamento di questa tecnica è stata effettuata un'implementazione in R, sia per l'obiettivo di classificazione che per quello di regressione. Per implementare il bagging è stato utilizzato il pacchetto caret. Il lavoro è stato così strutturato: una preliminare fase di analisi esplorativa del dataset, una seconda fase di selezione delle features sulla base di alcune caratteristiche di esse e successivamente testing e valutazione dei modelli. Come algoritmi sono stati scelti gli alberi di decisione come weak learner e le stime ottenute da essi sono state poi confrontate con quelle ottenute dal bagging al fine di valutare i benefici di tale tecnica.  
+L'obiettivo di questo progetto è approfondire la procedura di *bagging*. Al fine di approfondire il funzionamento di questa tecnica è stata effettuata un'implementazione in R, sia per l'obiettivo di classificazione che per quello di regressione. Per implementare il *bagging* è stato utilizzato il pacchetto *caret*. Il lavoro è stato così strutturato: una preliminare fase di analisi esplorativa del dataset, una seconda fase di selezione delle features sulla base di alcune caratteristiche di esse e successivamente testing e valutazione dei modelli. I modelli scelti per l'analisi sono gli alberi di decisione come weak learner e le stime ottenute da essi sono state poi confrontate con quelle ottenute dalla procedura di *bagging* al fine di valutarne i benefici.  
 
 
 # Introduzione
 
 
-Il bagging, o bootstrap aggregation, è una procedura utilizzata per ridurre la varianza di un metodo di apprendimento statistico. Tale tecnica si basa sul concetto di bootstrap, una procedura di ricampionamento che crea b nuovi bootstrap samples, campioni con reinserinento provenienti dal training set, e attraverso questi è possibile valutare l'accuratezza della stima di un parametro o di una previsione. Il bagging sfrutta proprio tale procedura per migliorare le stime o la stessa previsione. Il bagging è designato per migliorare appunto la stabilità e accuratezza degli algoritmi di regressione e classificazione. Mediante la media del modello il bagging riesce a ridurre la varianza e minimizzare l'overfitting. I bootstrap aggregating (bagging) prediction models sono metodi generali per addestrare molteplici versioni di un modello di previsione e poi combinare (ensembling) queste in un unica previsione aggregata. 
+Il *bagging*, o bootstrap aggregation, è una procedura utilizzata per ridurre la varianza di un metodo di apprendimento statistico. Tale tecnica si basa sul concetto di bootstrap, una procedura di ricampionamento che crea b nuovi bootstrap samples, campioni con reinserinento provenienti dal training set, e attraverso questi è possibile valutare l'accuratezza della stima di un parametro o di una previsione. Il *bagging* sfrutta proprio tale procedura per migliorare le stime o la stessa previsione. Il *bagging* è designato per migliorare appunto la stabilità e accuratezza degli algoritmi di regressione e classificazione. Mediante la media del modello il *bagging* riesce a ridurre la varianza e minimizzare l'overfitting. I bootstrap aggregating (bagging) prediction models sono quindi metodi generali per addestrare molteplici versioni di un modello di previsione e poi combinare (ensembling) queste in un unica previsione aggregata. 
 ...
 
 Bagging is a fairly straight forward algorithm in which b bootstrap copies of the original training data are created, the regression or classification algorithm (commonly referred to as the base learner) is applied to each bootstrap sample and, in the regression context, new predictions are made by averaging the predictions together from the individual base learners. When dealing with a classification problem, the base learner predictions are combined using plurality vote or by averaging the estimated class probabilities together. Because of the aggregation process, bagging effectively reduces the variance of an individual base learner (i.e., averaging reduces variance); however, bagging does not always improve upon an individual base learner.Bagging works especially well for unstable, high variance base learners—algorithms whose predicted output undergoes major changes in response to small changes in the training data.This includes algorithms such as decision trees and KNN (when k is sufficiently small). However, for algorithms that are more stable or have high bias, bagging offers less improvement on predicted outputs since there is less variability. 
@@ -26,11 +26,10 @@ The process of bagging involves fitting models to each of the bootstrap samples 
 
 # Prerequisiti
 
-Faremo uso dei seguenti pacchetti per effettuare l'analisi sul dataset.
+Faremo uso dei seguenti pacchetti per effettuare l'analisi sul dataset scelto.
 
 ```{r setup}
 library(dplyr) 
-library(lubridate)
 library(ggplot2)
 library(plotly)
 library(gmodels)
@@ -43,7 +42,6 @@ library(tibble)
 library(forcats)
 library(doParallel) 
 library(foreach)
-library(scorecard)
 
 data<- read.csv("/Users/lorenzobruni/Desktop/WA_Fn-UseC_-Telco-Customer-Churn.csv")
 data<-na.omit(data)
@@ -51,17 +49,20 @@ data<-na.omit(data)
 
 #Analisi esplorativa
 
+In questa sezione, al fine di conoscere meglio il dataset con cui è stato condotto lo studio, è stata effettuata un'analisi esplorativa per indagare meglio la struttura delle variabili su cui basare il modello e per supportare le decisioni intraprese nella parte di feature selection.
+
 ```{r, echo=FALSE}
 dim(data)
 str(data)
 ```
+Come possiamo vedere il dataset di churn scelto è composto da **7032** righe e **21** colonne. Fra queste abbiamo: *CustomerID*, *gender*, *SeniorCitizen* (variabile dicotomica che indica se il cliente è un cittadino anziano o no), *Partner*, *Dependents* (se il cliente ha persone a carico o meno), *tenure* (numero di mesi che il consumatore è rimasto con l'azienda), una serie di variabili legate hai servizi del cliente (*PhoneService*, *MultipleLines*, *InternetService*, *OnlineSecurity*, *OnlineBackup*, *DeviceProtection*, *TechSupport*, *StreamingTV*, *StreamingMovies*),  *Contract* (variabile che indici i termini del contratto del cliente), *PaperlessBilling* (se il cliente ha o meno una fatturazione senza carta), *PaymentMethod*, *MonthlyCharges* (l'importo addebitato mensilmente al cliente), *TotalCharges* (l'importo totale addebitato al cliente), *Churn.*
 
-```{r, echo=FALSE}
-summary(data)
+```{r}
+summary(data$tenure)
 sd(data$tenure)
 ```
 
-
+Particolarmente interessante per la nostra analisi di regressione è lo studio della variabile target *tenure*. Come possiamo vedere la deviazione standard di questa variabile è molto elevato pari a **24.5**, con una media di **32.4**.
 
 ```{r, echo=FALSE}
 ggplot(data = data, aes(x = "", y = tenure)) + 
@@ -70,6 +71,8 @@ ggplot(data = data, aes(x = "", y = tenure)) +
        y='Tenure',x='')+
   coord_cartesian()
 ```
+
+Possiamo vedere l'elevata variabilità di questa variabile anche dallo studio del relativo boxplot presente nella precedente figura.
 
 ```{r, echo=FALSE}
 df <- data %>%
@@ -82,6 +85,7 @@ ggplot(df, aes(x = Churn, y = counts)) +
   labs(title = 'Churn distribution')
 ```
 
+Inoltre, per quanto riguarda la variabile di *churn* vediamo dal precedente grafico come il numero di clienti che hanno effettuato il churn sia nettamente inferiore rispetto a coloro che non lo hanno fatto.
 
 ```{r, echo=FALSE}
 ggplot(data = data, aes(x=Churn,y=tenure, fill=Churn)) + 
@@ -91,6 +95,9 @@ ggplot(data = data, aes(x=Churn,y=tenure, fill=Churn)) +
        y='tenure',x='Churn')
 ```
 
+Dal precedente grafico è possibile vedere che la variabile *tenure* è una variabile potenzialmente utile nelllo spiegare il comportamento di *churn* dei clienti, indicando che clienti con un numero di mesi trascorsi con l'azienda maggiore presenta una minore probabilità di abbandono.
+
+
 ```{r, echo=FALSE}
 ggplot(data = data, aes(x=Churn,y=TotalCharges, fill=Churn)) + 
   geom_boxplot()+
@@ -98,6 +105,8 @@ ggplot(data = data, aes(x=Churn,y=TotalCharges, fill=Churn)) +
   labs(title = 'Churn vs TotalCharges',
        y='TotalCharges',x='Churn')
 ```
+
+Come possiamo vedere dal grafico sovrastante la variabile *TotalCharges* rappresenta anch'essa un fattore potenzialmente determinante nello spiegare il comportamento della variabile di *Churn*. Maggiore l'ammontare totale speso, minore la probabilità di abbandono.
 
 ```{r, echo=FALSE}
 ggplot(data = data, aes(x=Churn,y=MonthlyCharges, fill=Churn)) + 
@@ -107,21 +116,13 @@ ggplot(data = data, aes(x=Churn,y=MonthlyCharges, fill=Churn)) +
        y='MonthlyCharges',x='Churn')
 ```
 
+Come possiamo vedere dal grafico sovrastante la variabile *TotalCharges* rappresenta anch'essa un fattore potenzialmente determinante nello spiegare il comportamento della variabile di *Churn*. Maggiore l'ammontare totale speso, minore la probabilità di abbandono.
 
-```{r, echo=FALSE}
-corr<- data[, c("MonthlyCharges", "TotalCharges", "tenure")]
-cor(corr, method = "pearson", use = "complete.obs")
-```
+Data la dipendenza tra le variabili *TotalCharges* e *MonthlyCharges*, decidiamo di escludere una delle due variabili e teniamo per l'analisi la variabile *MonthlyCharges*. 
 
-```{r, echo=FALSE}
-ggplot(data, aes(TotalCharges,tenure))+geom_point()+geom_smooth(method=lm)
-```
+Ragionamento simile per le variabili *Phoneservice* e *MultipleLines* nel quale la seconda è inevitabilmente legata ai valori assunti dalla prima. Decidiamo così di includere nell'analisi solo la variabile *Phoneservice*.
 
-Data la dipendenza tra le variabili TotalCharges e MonthlyCharges, decidiamo di escludere una delle due variabili e teniamo per l'analisi la variabile TotalCharges.
-
-Ragionamento simile per le variabili Phoneservice e MultipleLines nel quale la seconda è inevitabilmente legata ai valori assunti dalla prima. Decidiamo così di includere nell'analisi solo la variabile Phoneservice.
-
-Lo stesso ragionamento è stato effettuato per quanto riguarda il legame tra la variabile InternetService e le variabili OnlineSecurity, OnlineBackup, DeviceProtection, MonthlyCharges, TechSupport, StreamingTV, StreamingMovies. Anche in questo caso decidiamo di tenere in considerazione esclusivamente la variabile InternetService poichè i valori assunti dalle altre variabili risultano influenzati dai valori di quest'ultima.
+Lo stesso ragionamento è stato effettuato per quanto riguarda il legame tra la variabile *InternetService* e le variabili *OnlineSecurity*, *OnlineBackup*, *DeviceProtection*, *MonthlyCharges*, *TechSupport*, *StreamingTV*, *StreamingMovies*. Anche in questo caso decidiamo di tenere in considerazione esclusivamente la variabile InternetService poichè i valori assunti dalle altre variabili risultano influenzati dai valori di quest'ultima.
 
 
 # Analisi di Regressione
@@ -130,7 +131,7 @@ L'analisi di regressione viene effetuata cercando di prevedere i valori assunti 
 
 
 ```{r, echo=FALSE }
-data <- subset(data,select=-c(customerID, Churn, MultipleLines, OnlineSecurity, OnlineBackup, DeviceProtection, MonthlyCharges, TechSupport, StreamingTV, StreamingMovies))
+data <- subset(data,select=-c(customerID, Churn, MultipleLines, OnlineSecurity, OnlineBackup, DeviceProtection, TotalCharges, TechSupport, StreamingTV, StreamingMovies))
 set.seed(1234)
 split <- sample(nrow(data), floor(0.7*nrow(data)))
 traindf <- data[split,]
@@ -140,7 +141,7 @@ testdf <-  data[-split,]
 
 ## Albero di regressione
 
-Come detto in precedenza il modello semplice che decidiamo di utilizzare come weak-learner è l'albero decisionale. Per la costruzione dell'albero di regressione usiamo la funzione rpart() contenuta nel pacchetto rpart, dopodiché per la visualizzazione dell'albero utilizziamo la funzione rpart.plot(). Il processo di addestramento e visualizzazione del modello è molto simile sia per la parte di regressione che per quella di classificazione.
+Come detto in precedenza il modello semplice che decidiamo di utilizzare come weak-learner è l'albero decisionale. Per la costruzione dell'albero di regressione usiamo la funzione *rpart()* contenuta nel pacchetto rpart, dopodiché per la visualizzazione dell'albero utilizziamo la funzione *rpart.plot()*. Il processo di addestramento e visualizzazione del modello è molto simile sia per la parte di regressione che per quella di classificazione.
 
 ```{r}
 fit <- rpart(
@@ -155,20 +156,22 @@ fit <- rpart(
 rpart.plot(fit)
 ```
 
-La variabile che decreta il primo split (la prima variaile è quella che retituisce la più grande riduzione nel SSE) è TotalCharges.
+La variabile che decreta il primo split (la variaile che retituisce la più grande riduzione nel SSE) è *Contract*.
 
-Visualizzando il modello ad albero con rpart.plot(), una cosa che si può notare è che l'albero contiene 9 nodi interni e 10 risultanti nodi terminali. 
+Visualizzando il modello ad albero con *rpart.plot()*, una cosa che si può notare è che l'albero contiene 6 nodi interni e 7 risultanti nodi terminali. 
 
-Di default rpart() automaticamente applica un range di valori di cost complexity ( α values per potare l'albero). Per confrontare l'errore associato a ciascun α value, rpart() performa un 10-fold CV.
+Di default *rpart()* automaticamente applica un range di valori di cost complexity (*cp* values) per potare l'albero. Per confrontare l'errore associato a ciascun *cp* value, *rpart()* performa un 10-fold CV.
 
 ```{r, echo=FALSE}
 plotcp(fit)
 ```
 
-Il grafico di pruning complexity parameter (cp) illustra il relativo cross validation error (y-axis) per vari cp values (lower x-axis). Piccoli valori di cp portano ad alberi più grandi (upper x-axis). 
+Il grafico di pruning complexity parameter (*cp*) illustra il relativo cross validation error (y-axis) per vari cp values (lower x-axis). Piccoli valori di *cp* portano ad alberi più grandi (upper x-axis). 
+Dal precedente grafico si può notare come un vlore ottimale di *cp* è **0.031**, offrendo un buon bilanciamento tra complessità del modello e relativo errore.
 
-```{r, echo=FALSE}
-preds <- predict(fit, testdf)
+```{r}
+pruned <- prune(fit, cp=0.031)
+preds <- predict(pruned, testdf)
 rmse <- RMSE(
    pred = preds,
    obs = testdf$tenure
@@ -176,7 +179,7 @@ rmse <- RMSE(
 rmse
 ```
 
-Il root mean square error ottenuto valutando il modello finale sul test set è pari a 7.2. Considerando che lo scarto quadratico medio per la variabile tenure come visto in precedenza è 24.5, il risultato ottenuto dal nostro modello può essere considerato soddisfacente.
+Il root mean square error ottenuto valutando il modello finale sul test set è pari a **17.05**. Considerando che lo scarto quadratico medio per la variabile *tenure* come visto in precedenza è **24.5**, il risultato ottenuto dal nostro modello può essere considerato soddisfacente.
 
 Per misurare l'importanza che le varie feature assumono nello spiegare il comportamento della variabile target, viene considerata la riduzione nella funzione di perdita (ovvero, SSE) attribuita ad ogni variabile ad ogni split. In alcuni casi, una variable potrebbe essere usata molte volte in un albero; di conseguenza, la riduzione totale nella funzione di perdita causata da una variabile nei vari split sono sommate e usate per la feature importance. Gli alberi decisionali eseguono automaticamente feature selection dal momento che le feature non informative non vengono usate dal modello.
 
@@ -192,7 +195,9 @@ fit$variable.importance %>%
    labs(x = "", y = "", title = "Variable Importance with Simple Regression")
 ```
 
-Gli alberi decisionali hanno diversi vantaggi: 
+Dal precedente grafico, che illustra l'importanza che le varie features hanno nello spiegare il comportamento della variabile target, sono sicuramente da evidenziare le variabili *Contract*, *PaymentMethod* e *MonthlyCharges*.
+
+In conclusione, gli alberi decisionali hanno diversi vantaggi: 
 - richiedono poco pre-processing, questo non vuol dire che il feature engineering non migliori le prestazioni del modello, ma piuttosto che non ci sono particolari requisiti di pre-processing;
 - Solitamente gli outliers non distorgono tanto i risultati, dal momento che il partizionamento binario semplicemente guarda alla singola istance per decretare lo split all'interno una distribuzione di feature. 
 - Gli alberi decisionali possono facilmente gestire categorical features senza pre-processing. Tuttavia, essi spesso non raggiungono ottimi risultati in termini di performance.
@@ -200,7 +205,7 @@ Gli alberi decisionali hanno diversi vantaggi:
 
 ## Bagging
 
-Bootstrap aggregating (bagging) prediction models is a general method for fitting multiple versions of a prediction model and then combining (or ensembling) them into an aggregated prediction. 
+Bootstrap aggregating (*bagging*) prediction models is a general method for fitting multiple versions of a prediction model and then combining (or ensembling) them into an aggregated prediction. 
 Optimal performance is often found by bagging 50–500 trees. Data sets that have a few strong predictors typically require less trees; whereas data sets with lots of noise or multiple strong predictors may need more.  
 
 
@@ -243,5 +248,5 @@ cs_scoreboard
 
 # Conclusioni
 
-Il processo di bagging migliora l'accuratezza delle previsioni per modelli ad elevata varianza (e basso bias) a spese dell'interpretabilità e della velocità computazionale. Tuttavia, usando vari algoritmi di interpretabilità, possiamo ancora fare inferenza su come il nostro bagged model sfrutta la feature information. Inoltre, dal momento che il bagging consiste in una serie di processi indipendenti, l'algoritmo è facilmente parallelizzabile.
-Tuttavia, con il processo di bagging degli alberi, un problema esiste ancora. Nonostante il modello esegue i vari step in maniera indipendente, gli alberi nel bagging non sono completamente indipendenti tra loro dal momento che tutte le features sono considerate ad ogni split di ogni albero. Di conseguenza, alberi da diversi bootstrap samples solitamente hanno una struttura simile fra loro (specialmente in cima all'albero) a causa di eventuali relazioni forti sottostanti. Questa caratteristica è conosciuta come tree correlation e previene il bagging da ridurre ulteriormente la varianza del base learner. Random forests extend and improve upon bagged decision trees by reducing this correlation and thereby improving the accuracy of the overall ensemble.
+Il processo di *bagging* migliora l'accuratezza delle previsioni per modelli ad elevata varianza (e basso bias) a spese dell'interpretabilità e della velocità computazionale. Tuttavia, usando vari algoritmi e strumenti di interpretabilità, possiamo ancora fare inferenza su come il nostro bagged model sfrutta la feature information. Inoltre, dal momento che il bagging consiste in una serie di processi indipendenti, l'algoritmo risulta facilmente parallelizzabile.
+Tuttavia, con il processo di bagging degli alberi un problema continua a sussistere. Nonostante il modello esegue i vari step in maniera indipendente, gli alberi nel processo di bagging non sono completamente indipendenti tra di loro, dal momento che tutte le features sono considerate ad ogni split di ogni albero. Di conseguenza, alberi provenienti da diversi bootstrap samples hanno una struttura simile fra loro (specialmente nella parte iniziale dell'albero) a causa di eventuali relazioni forti sottostanti. Questa caratteristica è conosciuta come **tree correlation** e previene il *bagging* da ridurre ulteriormente la varianza del base learner. Gli algoritmi di Random forest estendono e migliorano i bagged decision trees riducendo questa correlazione e migliorando così la precisione dell'insieme complessivo.

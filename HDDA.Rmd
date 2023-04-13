@@ -16,7 +16,12 @@ L'obiettivo di questo progetto è approfondire la procedura di bagging. Al fine 
 
 Il bagging, o bootstrap aggregation, è una procedura utilizzata per ridurre la varianza di un metodo di apprendimento statistico. Tale tecnica si basa sul concetto di bootstrap, una procedura di ricampionamento che crea b nuovi bootstrap samples, campioni con reinserinento provenienti dal training set, e attraverso questi è possibile valutare l'accuratezza della stima di un parametro o di una previsione. Il bagging sfrutta proprio tale procedura per migliorare le stime o la stessa previsione. Il bagging è designato per migliorare appunto la stabilità e accuratezza degli algoritmi di regressione e classificazione. Mediante la media del modello il bagging riesce a ridurre la varianza e minimizzare l'overfitting. I bootstrap aggregating (bagging) prediction models sono metodi generali per addestrare molteplici versioni di un modello di previsione e poi combinare (ensembling) queste in un unica previsione aggregata. 
 ...
-Esso viene solitamente applicato agli alberi decisionali, ma tuttavia può essere utilizzato con ogni altro metodo.
+
+Bagging is a fairly straight forward algorithm in which b bootstrap copies of the original training data are created, the regression or classification algorithm (commonly referred to as the base learner) is applied to each bootstrap sample and, in the regression context, new predictions are made by averaging the predictions together from the individual base learners. When dealing with a classification problem, the base learner predictions are combined using plurality vote or by averaging the estimated class probabilities together. Because of the aggregation process, bagging effectively reduces the variance of an individual base learner (i.e., averaging reduces variance); however, bagging does not always improve upon an individual base learner.Bagging works especially well for unstable, high variance base learners—algorithms whose predicted output undergoes major changes in response to small changes in the training data.This includes algorithms such as decision trees and KNN (when k is sufficiently small). However, for algorithms that are more stable or have high bias, bagging offers less improvement on predicted outputs since there is less variability. 
+Esso viene solitamente applicato agli alberi decisionali, ma tuttavia può essere utilizzato con ogni altro metodo. Using too many trees will not lead to overfitting. However, it’s important to realize that since multiple models are being run, the more iterations you perform the more computational and time requirements you will have. As these demands increase, performing k-fold CV can become computationally burdensome.
+A benefit to creating ensembles via bagging, which is based on resampling with replacement, is that it can provide its own internal estimate of predictive performance with the out-of-bag (OOB) sample. The OOB sample can be used to test predictive performance and the results usually compare well compared to k-fold CV assuming your data set is sufficiently large (say n ≥ 1000). Consequently, as your data sets become larger and your bagging iterations increase, it is common to use the OOB error estimate as a proxy for predictive performance.
+
+The process of bagging involves fitting models to each of the bootstrap samples which are completely independent of one another. This means that each model can be trained in parallel and the results aggregated in the end for the final model. Consequently, if you have access to a large cluster or number of cores, you can more quickly create bagged ensembles on larger data sets.
 
 
 # Prerequisiti
@@ -119,9 +124,9 @@ Ragionamento simile per le variabili Phoneservice e MultipleLines nel quale la s
 Lo stesso ragionamento è stato effettuato per quanto riguarda il legame tra la variabile InternetService e le variabili OnlineSecurity, OnlineBackup, DeviceProtection, MonthlyCharges, TechSupport, StreamingTV, StreamingMovies. Anche in questo caso decidiamo di tenere in considerazione esclusivamente la variabile InternetService poichè i valori assunti dalle altre variabili risultano influenzati dai valori di quest'ultima.
 
 
-#Analisi di Regressione
+# Analisi di Regressione
 
-L'analisi di regressione viene effetuata cercando di prevedere i valori assunti dalla variabile tenure rispetto alle altre variabili. 
+L'analisi di regressione viene effetuata cercando di prevedere i valori assunti dalla variabile tenure mediante l'utilizzo delle altre variabili rimaste come regressori. 
 
 
 ```{r, echo=FALSE }
@@ -132,6 +137,8 @@ traindf <- data[split,]
 testdf <-  data[-split,]
 ```
 
+
+## Albero di regressione
 
 Come detto in precedenza il modello semplice che decidiamo di utilizzare come weak-learner è l'albero decisionale. Per la costruzione dell'albero di regressione usiamo la funzione rpart() contenuta nel pacchetto rpart, dopodiché per la visualizzazione dell'albero utilizziamo la funzione rpart.plot(). Il processo di addestramento e visualizzazione del modello è molto simile sia per la parte di regressione che per quella di classificazione.
 
@@ -169,9 +176,10 @@ rmse <- RMSE(
 rmse
 ```
 
-The pruning process leads to an average prediction error of 7.2 in the test data set. This is not bad considering the standard deviation for that variable as seen above is 24.5.
+Il root mean square error ottenuto valutando il modello finale sul test set è pari a 7.2. Considerando che lo scarto quadratico medio per la variabile tenure come visto in precedenza è 24.5, il risultato ottenuto dal nostro modello può essere considerato soddisfacente.
 
-To measure feature importance, the reduction in the loss function (e.g., SSE) attributed to each variable at each split is tabulated. In some instances, a single variable could be used multiple times in a tree; consequently, the total reduction in the loss function across all splits by a variable are summed up and used as the total feature importance. Decision trees perform automated feature selection where uninformative features are not used in the model.
+Per misurare l'importanza che le varie feature assumono nello spiegare il comportamento della variabile target, viene considerata la riduzione nella funzione di perdita (ovvero, SSE) attribuita ad ogni variabile ad ogni split. In alcuni casi, una variable potrebbe essere usata molte volte in un albero; di conseguenza, la riduzione totale nella funzione di perdita causata da una variabile nei vari split sono sommate e usate per la feature importance. Gli alberi decisionali eseguono automaticamente feature selection dal momento che le feature non informative non vengono usate dal modello.
+
 ```{r, echo=FALSE}
 fit$variable.importance %>% 
    data.frame() %>%
@@ -183,16 +191,21 @@ fit$variable.importance %>%
    coord_flip() +
    labs(x = "", y = "", title = "Variable Importance with Simple Regression")
 ```
-Variable importance based on the total reduction in cross-validated SSE for the tenure decision tree.
 
-Decision trees have a number of advantages. Trees require very little pre-processing. This is not to say feature engineering may not improve upon a decision tree, but rather, that there are no pre-processing requirements. Outliers typically do not bias the results as much since the binary partitioning simply looks for a single location to make a split within the distribution of each feature. Decision trees can easily handle categorical features without preprocessing. However, individual decision trees generally do not often achieve state-of-the-art predictive accuracy.
+Gli alberi decisionali hanno diversi vantaggi: 
+- richiedono poco pre-processing, questo non vuol dire che il feature engineering non migliori le prestazioni del modello, ma piuttosto che non ci sono particolari requisiti di pre-processing;
+- Solitamente gli outliers non distorgono tanto i risultati, dal momento che il partizionamento binario semplicemente guarda alla singola istance per decretare lo split all'interno una distribuzione di feature. 
+- Gli alberi decisionali possono facilmente gestire categorical features senza pre-processing. Tuttavia, essi spesso non raggiungono ottimi risultati in termini di performance.
 
 
-Bootstrap aggregating (bagging) prediction models is a general method for fitting multiple versions of a prediction model and then combining (or ensembling) them into an aggregated prediction. Bagging is a fairly straight forward algorithm in which b bootstrap copies of the original training data are created, the regression or classification algorithm (commonly referred to as the base learner) is applied to each bootstrap sample and, in the regression context, new predictions are made by averaging the predictions together from the individual base learners. When dealing with a classification problem, the base learner predictions are combined using plurality vote or by averaging the estimated class probabilities together. Because of the aggregation process, bagging effectively reduces the variance of an individual base learner (i.e., averaging reduces variance); however, bagging does not always improve upon an individual base learner.Bagging works especially well for unstable, high variance base learners—algorithms whose predicted output undergoes major changes in response to small changes in the training data.This includes algorithms such as decision trees and KNN (when k is sufficiently small). However, for algorithms that are more stable or have high bias, bagging offers less improvement on predicted outputs since there is less variability.
-Optimal performance is often found by bagging 50–500 trees. Data sets that have a few strong predictors typically require less trees; whereas data sets with lots of noise or multiple strong predictors may need more. Using too many trees will not lead to overfitting. However, it’s important to realize that since multiple models are being run, the more iterations you perform the more computational and time requirements you will have. As these demands increase, performing k-fold CV can become computationally burdensome. 
-A benefit to creating ensembles via bagging, which is based on resampling with replacement, is that it can provide its own internal estimate of predictive performance with the out-of-bag (OOB) sample. The OOB sample can be used to test predictive performance and the results usually compare well compared to k-fold CV assuming your data set is sufficiently large (say n ≥ 1000). Consequently, as your data sets become larger and your bagging iterations increase, it is common to use the OOB error estimate as a proxy for predictive performance.
+## Bagging
 
-Rather than use a single pruned decision tree, we can use, say, 100 bagged unpruned trees (by not pruning the trees we’re keeping bias low and variance high which is when bagging will have the biggest effect). One thing to note is that typically, the more trees the better. As we add more trees we’re averaging over more high variance decision trees. Early on, we see a dramatic reduction in variance (and hence our error) but eventually the error will typically flatline and stabilize signaling that a suitable number of trees has been reached. Often, we need only 50–100 trees to stabilize the error (in other cases we may need 500 or more).
+Bootstrap aggregating (bagging) prediction models is a general method for fitting multiple versions of a prediction model and then combining (or ensembling) them into an aggregated prediction. 
+Optimal performance is often found by bagging 50–500 trees. Data sets that have a few strong predictors typically require less trees; whereas data sets with lots of noise or multiple strong predictors may need more.  
+
+
+Rather than use a single pruned decision tree, we can use, 100 bagged unpruned trees (by not pruning the trees we’re keeping bias low and variance high which is when bagging will have the biggest effect). One thing to note is that typically, the more trees the better. As we add more trees we’re averaging over more high variance decision trees. Eventually the error will typically flatline and stabilize signaling that a suitable number of trees has been reached. Often, we need only 50–100 trees to stabilize the error (in other cases we may need 500 or more).
+
 ```{r}
 set.seed(1234)
 bag_model <- train(
@@ -205,7 +218,7 @@ bag_model <- train(
    )
 bag_model
 ```
-The process of bagging involves fitting models to each of the bootstrap samples which are completely independent of one another. This means that each model can be trained in parallel and the results aggregated in the end for the final model. Consequently, if you have access to a large cluster or number of cores, you can more quickly create bagged ensembles on larger data sets.
+
 
 ```{r, echo=FALSE}
 cs_preds_bag <- bind_cols(
@@ -216,6 +229,7 @@ cs_preds_bag <- bind_cols(
 ```
 
 Unfortunately, due to the bagging process, models that are normally perceived as interpretable are no longer so. However, we can still make inferences about how features are influencing our model. For bagged decision trees, this process is similar to the one of the decision tree. For each tree, we compute the sum of the reduction of the loss function across all splits. We then aggregate this measure across all trees for each feature. The features with the largest average decrease in SSE (for regression) are considered most important. 
+
 ```{r, echo=FALSE}
 plot(varImp(bag_model), main="Variable Importance with Bagging")
 ```
@@ -229,5 +243,5 @@ cs_scoreboard
 
 # Conclusioni
 
-Bagging improves the prediction accuracy for high variance (and low bias) models at the expense of interpretability and computational speed. However, using various interpretability algorithms, we can still make inferences about how our bagged model leverages feature information. Also, since bagging consists of independent processes, the algorithm is easily parallelizable.
-However, when bagging trees, a problem still exists. Although the model building steps are independent, the trees in bagging are not completely independent of each other since all the original features are considered at every split of every tree. Rather, trees from different bootstrap samples typically have similar structure to each other (especially at the top of the tree) due to any underlying strong relationships. This characteristic is known as tree correlation and prevents bagging from further reducing the variance of the base learner. Random forests extend and improve upon bagged decision trees by reducing this correlation and thereby improving the accuracy of the overall ensemble.
+Il processo di bagging migliora l'accuratezza delle previsioni per modelli ad elevata varianza (e basso bias) a spese dell'interpretabilità e della velocità computazionale. Tuttavia, usando vari algoritmi di interpretabilità, possiamo ancora fare inferenza su come il nostro bagged model sfrutta la feature information. Inoltre, dal momento che il bagging consiste in una serie di processi indipendenti, l'algoritmo è facilmente parallelizzabile.
+Tuttavia, con il processo di bagging degli alberi, un problema esiste ancora. Nonostante il modello esegue i vari step in maniera indipendente, gli alberi nel bagging non sono completamente indipendenti tra loro dal momento che tutte le features sono considerate ad ogni split di ogni albero. Di conseguenza, alberi da diversi bootstrap samples solitamente hanno una struttura simile fra loro (specialmente in cima all'albero) a causa di eventuali relazioni forti sottostanti. Questa caratteristica è conosciuta come tree correlation e previene il bagging da ridurre ulteriormente la varianza del base learner. Random forests extend and improve upon bagged decision trees by reducing this correlation and thereby improving the accuracy of the overall ensemble.

@@ -205,11 +205,11 @@ In conclusione, gli alberi decisionali hanno diversi vantaggi:
 
 ## Bagging
 
-Bootstrap aggregating (*bagging*) prediction models is a general method for fitting multiple versions of a prediction model and then combining (or ensembling) them into an aggregated prediction. 
-Optimal performance is often found by bagging 50–500 trees. Data sets that have a few strong predictors typically require less trees; whereas data sets with lots of noise or multiple strong predictors may need more.  
+I Bootstrap aggregating (*bagging*) prediction models sono un metodo generale per addestrare molteplici versioni di un modello di previsione e poi combinando (ensembling) i vari risultati in una previsione aggregata. 
 
+La performance ottimale è spesso trovata unendo 50–500 alberi. Dataset con pochi previsori richiedono spesso meno alberi; mentre i set di dati con molto rumore o più predittori forti potrebbero aver bisogno di più alberi.  
 
-Rather than use a single pruned decision tree, we can use, 100 bagged unpruned trees (by not pruning the trees we’re keeping bias low and variance high which is when bagging will have the biggest effect). One thing to note is that typically, the more trees the better. As we add more trees we’re averaging over more high variance decision trees. Eventually the error will typically flatline and stabilize signaling that a suitable number of trees has been reached. Often, we need only 50–100 trees to stabilize the error (in other cases we may need 500 or more).
+Per questa analisi decidiamo di utilizzare 100 alberi non potati (non potando gli alberi stiamo mantenendo una bassa distorsione ma un elevata varianza ed è in questo caso che è possibile ottenere un effetto maggiore dal bagging). Una cosa da notare è che tipicamente, più alberi vengono utilizzati e migliore saranno la prestazioni del modello di bagging, dal momento che aggiungendo più alberi mediamo tra più modelli decisionali ad elevata varianza. Tipicamente, l'errore di previsione si appiattisce e si stabilizza una volta raggiunto un numero adeguato di alberi. Spesso, sono necessari circa 50–100 alberi per stabilizzare l'errore (in altri casi sono necessari 500 o più).
 
 ```{r}
 set.seed(1234)
@@ -232,8 +232,11 @@ cs_preds_bag <- bind_cols(
 )
 (cs_rmse_bag <- RMSE(pred = cs_preds_bag$Predicted, obs = cs_preds_bag$Actual))
 ```
+Il mean squared error ottenuto dal nostro modello risulta pari a  .
 
-Unfortunately, due to the bagging process, models that are normally perceived as interpretable are no longer so. However, we can still make inferences about how features are influencing our model. For bagged decision trees, this process is similar to the one of the decision tree. For each tree, we compute the sum of the reduction of the loss function across all splits. We then aggregate this measure across all trees for each feature. The features with the largest average decrease in SSE (for regression) are considered most important. 
+
+
+Sfortunatamente, per via del processo di bagging, modelli come gli alberi decisionali che sono percepiti come interpretabili e visualizzabil adesso non lo sono più. Tuttavia, possiamo ancora fare inferenza su come le varie features influenzano il nostro modello. Per i bagged decision trees, questo processo è simile a quello degli alberi decisionali. Per ciascun albero, si calcola la somma delle funziona di perdita fra tutti gli split. Dopodiché per ciascuna features si aggrega questa misura per tutti gli alberi. Le features con la più grande riduzione nel SSE (per la regressione) sono considerate importanti. 
 
 ```{r, echo=FALSE}
 plot(varImp(bag_model), main="Variable Importance with Bagging")
@@ -245,6 +248,8 @@ cs_scoreboard <- rbind(data.frame(Model = "Single Tree", RMSE = rmse),
 ) %>% arrange(RMSE)
 cs_scoreboard
 ```
+
+Confrontando il root mean squared error del modello di bagging con quello ottenuto dal decision tree, vediamo come siamo riusciti ad ottenere una buona riduzione dell'errore commesso dal precedente modello.
 
 # Conclusioni
 

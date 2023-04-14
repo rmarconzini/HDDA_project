@@ -14,14 +14,29 @@ L'obiettivo di questo progetto è approfondire la procedura di *bagging*. Al fin
 # Introduzione
 
 
-Il *bagging*, o bootstrap aggregation, è una procedura utilizzata per ridurre la varianza di un metodo di apprendimento statistico. Tale tecnica si basa sul concetto di bootstrap, una procedura di ricampionamento che crea b nuovi bootstrap samples, campioni con reinserinento provenienti dal training set, e attraverso questi è possibile valutare l'accuratezza della stima di un parametro o di una previsione. Il *bagging* sfrutta proprio tale procedura per migliorare le stime o la stessa previsione. Il *bagging* è designato per migliorare appunto la stabilità e accuratezza degli algoritmi di regressione e classificazione. Mediante la media del modello il *bagging* riesce a ridurre la varianza e minimizzare l'overfitting. I bootstrap aggregating (bagging) prediction models sono quindi metodi generali per addestrare molteplici versioni di un modello di previsione e poi combinare (ensembling) queste in un unica previsione aggregata. 
+Il *bagging*, o bootstrap aggregation, è una procedura utilizzata per ridurre la varianza di un metodo di apprendimento statistico. Tale tecnica si basa sul concetto di bootstrap, una procedura di ricampionamento che crea b nuovi bootstrap samples, campioni con reinserinento provenienti dal training set, e attraverso questi è possibile valutare l'accuratezza della stima di un parametro o di una previsione. Il *bagging* sfrutta proprio tale procedura per migliorare le stime o la stessa previsione. 
+
+
+## Bootstrap
+
+
 ...
 
-Bagging is a fairly straight forward algorithm in which b bootstrap copies of the original training data are created, the regression or classification algorithm (commonly referred to as the base learner) is applied to each bootstrap sample and, in the regression context, new predictions are made by averaging the predictions together from the individual base learners. When dealing with a classification problem, the base learner predictions are combined using plurality vote or by averaging the estimated class probabilities together. Because of the aggregation process, bagging effectively reduces the variance of an individual base learner (i.e., averaging reduces variance); however, bagging does not always improve upon an individual base learner.Bagging works especially well for unstable, high variance base learners—algorithms whose predicted output undergoes major changes in response to small changes in the training data.This includes algorithms such as decision trees and KNN (when k is sufficiently small). However, for algorithms that are more stable or have high bias, bagging offers less improvement on predicted outputs since there is less variability. 
-Esso viene solitamente applicato agli alberi decisionali, ma tuttavia può essere utilizzato con ogni altro metodo. Using too many trees will not lead to overfitting. However, it’s important to realize that since multiple models are being run, the more iterations you perform the more computational and time requirements you will have. As these demands increase, performing k-fold CV can become computationally burdensome.
-A benefit to creating ensembles via bagging, which is based on resampling with replacement, is that it can provide its own internal estimate of predictive performance with the out-of-bag (OOB) sample. The OOB sample can be used to test predictive performance and the results usually compare well compared to k-fold CV assuming your data set is sufficiently large (say n ≥ 1000). Consequently, as your data sets become larger and your bagging iterations increase, it is common to use the OOB error estimate as a proxy for predictive performance.
+
+## Bagging
+
+Come detto in precedenza, il *bagging* è designato per migliorare la stabilità e accuratezza degli algoritmi di regressione e classificazione. Mediante la media il *bagging* riesce a ridurre la varianza e minimizzare l'overfitting. I bootstrap aggregating (bagging) prediction models sono quindi metodi generali per addestrare molteplici versioni di un modello di previsione e poi combinare (ensembling) queste in un unica previsione aggregata. 
+
+Bagging è un algoritmo piuttosto semplice nel quale b bootstrap samples vengono creati dal training data, l'algoritmo di classificazione o regressione (commonly referred to as the base learner) viene applicato ad ogni bootstrap sample e, nel caso della regressione, le nuove previsioni sono fatte mediando le previsioni dei vari base learners. Quando trattiamo invece il caso di classificazione, le previsioni dei base learner sono combinated usando la classe più votata o mediando le probabilità delle varie classi stimate insieme. Per via del processo di aggregazione, il bagging riduce la varianza di un base learner; tuttavia, il bagging non sempre a migliorare le prestazioni del base learner. Bagging funziona specialmente bene per instabili base learners con alta varianza, nei quali gli output riscontrano grandi cambianti in risposta a piccoli cambiamenti nel training dataset. Fra questi algoritmi sono sicuramente da evidenziare ad esempio gli alberi decisionali. Per quanto riguarda invece algoritmi più stabili o con un elevato bias, il bagging offre pochi miglioramenti sulle previsioni, dal momento che c'è poca variabilità.
+
+Come detto il bagging viene quindi solitamente applicato agli alberi decisionali. Usare tanti alberi non porta all'overfitting, ma è importante realizzare che, dal momento che molteplici modelli vengono fatti girare, per numerose iterazioni il costo computazionale e il tempo richiesto sarà elevato.
+Un ulteriore beneficio del *bagging*, che si basa sul ricampionamento con reinserimento, è che può fornire la sua stima interna della performance previsiva del modelllo con *out-of-bag* (OOB) sample. *OOB* sample può essere usato per testare la performance previsiva e i risulati solitamente rispetto al k-fold CV performano bene, assumendo che il dataset sia sufficientemente grande (n ≥ 1000). Di conseguenza, come il dataset diventa più grande e le iterazioni del bagging crescono, è comune usare l' *OOB* error estimate come proxy per la performance previsiva del modello.
 
 The process of bagging involves fitting models to each of the bootstrap samples which are completely independent of one another. This means that each model can be trained in parallel and the results aggregated in the end for the final model. Consequently, if you have access to a large cluster or number of cores, you can more quickly create bagged ensembles on larger data sets.
+
+
+## Boosting e differenze con il bagging
+
 
 
 # Prerequisiti

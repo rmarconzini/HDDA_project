@@ -19,20 +19,28 @@ Il *bagging*, o bootstrap aggregation, è una procedura utilizzata per ridurre l
 
 ## Bootstrap
 
+Il *bagging* si basa sul metodo statistico del *bootstrapping*, che rende fattibile la valutazione di molte statistiche di modelli complessi.
 
-...
+Il *bootstrap* funziona nel seguente modo. Ipotizziamo la presenza di un campione $X$ di grandezza $N$. Possiamo creare un nuovo campione dal campione originale prelevando $N$ elementi da quest'ultimo in modo casuale e uniforme, con reinserimento. In altre parole, selezionamo casualmente elementi dal campione originale di grandezza $N$ e lo facciao $M$ volte. Ciascun elemento del campione ha la medesima probabilità di essere selezionato. Un aspetto sicuramente da notare è che reinserendo l'elemento appena selezionato per far parte del nuovo campione fra gli elementi selezionabili del campione originale, potrebbero esserci duplicati nel nuovo campione.
+Alla fine di questa procedura otteniamo così $M$ *bootstramp samples* $X_{1},..., X_{M}$, su cui è possibile calcolare varie statistiche della distribuzione originale.
 
 
 ## Bagging
 
-Come detto in precedenza, il *bagging* è designato per migliorare la stabilità e accuratezza degli algoritmi di regressione e classificazione. Mediante la media il *bagging* riesce a ridurre la varianza e minimizzare l'overfitting. I bootstrap aggregating (bagging) prediction models sono quindi metodi generali per addestrare molteplici versioni di un modello di previsione e poi combinare (ensembling) queste in un unica previsione aggregata. 
+I bootstrap aggregating (*bagging*) prediction models sono quindi metodi generali per addestrare molteplici versioni di un modello di previsione e poi combinare (*ensembling*) queste in un unica previsione aggregata. Come detto in precedenza, il *bagging* è designato per migliorare la stabilità e accuratezza degli algoritmi di regressione e classificazione. Mediante la media il *bagging* riesce a ridurre la varianza e minimizzare l'overfitting. Nel caso appunto di regressione, il mean squared error atteso di uno stimatore può essere decomposto in termini di distorsione, varianza e rumore. La parte di distorsione misura l'ammontare medio con il quale le previsioni di uno stimatore differiscono dalle previsioni dello stimatore migliore possibile per il problema. La parte di varianza misura la variabilità delle previsioni di uno stimatore quando lo addestriamo fra diverse istanze del solito problema. Infine, il rumore caratterizza la parte irriducibile dell'errore che è dovuta alla variabilità nei dati.
 
-Bagging è un algoritmo piuttosto semplice nel quale b bootstrap samples vengono creati dal training data, l'algoritmo di classificazione o regressione (commonly referred to as the base learner) viene applicato ad ogni bootstrap sample e, nel caso della regressione, le nuove previsioni sono fatte mediando le previsioni dei vari base learners. Quando trattiamo invece il caso di classificazione, le previsioni dei base learner sono combinated usando la classe più votata o mediando le probabilità delle varie classi stimate insieme. Per via del processo di aggregazione, il bagging riduce la varianza di un base learner; tuttavia, il bagging non sempre a migliorare le prestazioni del base learner. Bagging funziona specialmente bene per instabili base learners con alta varianza, nei quali gli output riscontrano grandi cambianti in risposta a piccoli cambiamenti nel training dataset. Fra questi algoritmi sono sicuramente da evidenziare ad esempio gli alberi decisionali. Per quanto riguarda invece algoritmi più stabili o con un elevato bias, il bagging offre pochi miglioramenti sulle previsioni, dal momento che c'è poca variabilità.
+
+Il *bagging* è un algoritmo piuttosto semplice nel quale b bootstrap samples vengono creati dal training data, l'algoritmo di classificazione o regressione (commonly referred to as the base learner) viene applicato ad ogni bootstrap sample e, nel caso della regressione, le nuove previsioni sono generate mediando le previsioni dei vari base learners eseguiti in maniera indipendente. Quando trattiamo invece il caso di classificazione, le previsioni dei base learner sono combinated usando la classe più votata o mediando le probabilità delle varie classi stimate. Questo processo è rappresentato nella seguente equazione dove $X$ rappreesenta il record per il quale si vuole generare una previsione, $\hat{f}_{bag}$ è la previsione del bagged model, mentre $\hat{f}_{1}(X)$, $\hat{f}_{2}(X)$,..., $\hat{f}_{b}(X)$ sono le previsioni dei base learners.
+
+$$\hat{f}_{bag} = \hat{f}_{1}(X) + \hat{f}_{2}(X) +... + \hat{f}_{b}(X)$$
+
+Per via del processo di aggregazione, il bagging riduce la varianza di un base learner; tuttavia, il bagging non sempre riesce a migliorare le prestazioni del base learner. Infatti, il *bagging* funziona specialmente bene per instabili base learners con elevata varianza, nei quali gli output dei modelli riscontrano grandi cambiamenti in risposta a piccoli cambiamenti nel training dataset. Fra questi algoritmi sono sicuramente da evidenziare ad esempio gli alberi decisionali. Per quanto riguarda invece algoritmi più stabili o con un bias elevato, il bagging offre pochi miglioramenti sulle previsioni, dal momento che c'è poca variabilità. 
+
+L'idea generale dietro il bagging fa riferimento alla "saggezza delò popolo". Essenzialmente significa che l'aggregazione di informazioni in gruppi ampi e diversi porta a decisioni che spesso sono migliori di quelle che avrebbero potuto essere prese da un singolo membro del gruppo. Più diversi sono i membri del gruppo, più diverse saranno le loro prospettive e previsioni, il che spesso porta a una migliore aggregazione delle informazioni.
+
 
 Come detto il bagging viene quindi solitamente applicato agli alberi decisionali. Usare tanti alberi non porta all'overfitting, ma è importante realizzare che, dal momento che molteplici modelli vengono fatti girare, per numerose iterazioni il costo computazionale e il tempo richiesto sarà elevato.
-Un ulteriore beneficio del *bagging*, che si basa sul ricampionamento con reinserimento, è che può fornire la sua stima interna della performance previsiva del modelllo con *out-of-bag* (OOB) sample. *OOB* sample può essere usato per testare la performance previsiva e i risulati solitamente rispetto al k-fold CV performano bene, assumendo che il dataset sia sufficientemente grande (n ≥ 1000). Di conseguenza, come il dataset diventa più grande e le iterazioni del bagging crescono, è comune usare l' *OOB* error estimate come proxy per la performance previsiva del modello.
-
-The process of bagging involves fitting models to each of the bootstrap samples which are completely independent of one another. This means that each model can be trained in parallel and the results aggregated in the end for the final model. Consequently, if you have access to a large cluster or number of cores, you can more quickly create bagged ensembles on larger data sets.
+Un ulteriore beneficio del *bagging* si basa sul ricampionamento con reinserimento, esso infatti può fornire la sua stima interna della performance previsiva del modelllo utilizzando *out-of-bag* (OOB) sample. *OOB* sample può essere usato per testare la performance previsiva del modello e i risulati di tale processo solitamente performano bene rispetto al k-fold CV, assumendo che il dataset sia sufficientemente grande (n ≥ 1000). Di conseguenza, come il dataset diventa più grande e le iterazioni del bagging crescono, è comune usare la stima dell'errore tramite *OOB* come proxy per la performance previsiva del modello.
 
 
 ## Boosting e differenze con il bagging
@@ -194,7 +202,7 @@ rmse <- RMSE(
 rmse
 ```
 
-Il root mean square error ottenuto valutando il modello finale sul test set è pari a **17.05**. Considerando che lo scarto quadratico medio per la variabile *tenure* come visto in precedenza è **24.5**, il risultato ottenuto dal nostro modello può essere considerato soddisfacente.
+Il root mean square error ottenuto valutando il modello finale sul test set è pari a **17.5**. Considerando che lo scarto quadratico medio per la variabile *tenure* come visto in precedenza è **24.5**, il risultato ottenuto dal nostro modello può essere considerato soddisfacente.
 
 Per misurare l'importanza che le varie feature assumono nello spiegare il comportamento della variabile target, viene considerata la riduzione nella funzione di perdita (ovvero, SSE) attribuita ad ogni variabile ad ogni split. In alcuni casi, una variable potrebbe essere usata molte volte in un albero; di conseguenza, la riduzione totale nella funzione di perdita causata da una variabile nei vari split sono sommate e usate per la feature importance. Gli alberi decisionali eseguono automaticamente feature selection dal momento che le feature non informative non vengono usate dal modello.
 
@@ -247,8 +255,7 @@ cs_preds_bag <- bind_cols(
 )
 (cs_rmse_bag <- RMSE(pred = cs_preds_bag$Predicted, obs = cs_preds_bag$Actual))
 ```
-Il mean squared error ottenuto dal nostro modello risulta pari a  .
-
+Il mean squared error ottenuto dal nostro modello risulta pari a  **16.58**.
 
 
 Sfortunatamente, per via del processo di bagging, modelli come gli alberi decisionali che sono percepiti come interpretabili e visualizzabil adesso non lo sono più. Tuttavia, possiamo ancora fare inferenza su come le varie features influenzano il nostro modello. Per i bagged decision trees, questo processo è simile a quello degli alberi decisionali. Per ciascun albero, si calcola la somma delle funziona di perdita fra tutti gli split. Dopodiché per ciascuna features si aggrega questa misura per tutti gli alberi. Le features con la più grande riduzione nel SSE (per la regressione) sono considerate importanti. 
@@ -256,6 +263,8 @@ Sfortunatamente, per via del processo di bagging, modelli come gli alberi decisi
 ```{r, echo=FALSE}
 plot(varImp(bag_model), main="Variable Importance with Bagging")
 ```
+
+In questo caso vediamo come la variabile più importante per il nostro modello è *MonthlyCharges* e non più *Contract* come nel precedente modello.
 
 ```{r, echo=FALSE}
 cs_scoreboard <- rbind(data.frame(Model = "Single Tree", RMSE = rmse),

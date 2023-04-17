@@ -1,0 +1,224 @@
+---
+title: "HDDA_Classification"
+author: "Remo Marconzini"
+date: "2023-04-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+# Import packages
+library(dplyr) 
+library(ggplot2)
+library(plotly)
+library(gmodels)
+library(rpart)      
+library(caret) 
+library(rpart.plot)  
+library(vip)         
+library(pdp) 
+library(tibble)
+library(forcats)
+library(doParallel) 
+library(foreach)
+library(ROSE)
+```
+
+
+```{r}
+# Import data
+
+data <- read.csv("churn.csv")
+data <- na.omit(data)
+```
+
+```{r}
+str(data)
+
+head(data)
+```
+
+# Data Exploration
+
+Per vedere l'analisi esplorativa completa vedere l'altro file. 
+
+```{r}
+# Variabile target -> churn
+
+is.factor((data$Churn)) # Dobbiamo trasfomrare la variabile in 0/1
+```
+Variabile dicotomica. Trasformiamola
+
+```{r}
+data$Churn <-factor(data$Churn)
+str(data)
+```
+
+
+
+
+# Classification
+
+```{r}
+data <- subset(data,select=-c(customerID, MultipleLines, OnlineSecurity, OnlineBackup, DeviceProtection, TotalCharges, TechSupport, StreamingTV, StreamingMovies))
+
+str(data)
+```
+
+```{r}
+categorical_var = c("gender", "SeniorCitizen", "Partner", "Dependents", "PhoneService", "InternetService", "Contract", "PaperlessBilling", "PaymentMethod")
+data[,categorical_var] <- lapply(data[,categorical_var] , as.factor)
+str(data)
+```
+```{r}
+attach(data)
+summary(data)
+```
+
+```{r}
+df <- data %>%
+  group_by(Churn) %>%
+  summarise(counts = n())
+
+ggplot(df, aes(x = Churn, y = counts)) +
+  geom_bar(fill = "#0073C2FF", stat = "identity") +
+  geom_text(aes(label = counts), vjust = -0.3) + 
+  labs(title = 'Churn distribution')
+```
+```{r}
+barplot(prop.table(table(data$Churn)),
+        col = rainbow(2),
+        ylim = c(0, 1),
+        main = "Class Distribution")
+```
+
+Based on the plot it clearly evident that 70% of the data in one class and the remaining 30% in another class.
+
+So big difference observed in the amount of data available. If we are making a model based on these a dataset accuracy predicting the Churn of the client will be higher compared to client does not Churn.
+
+```{r}
+table(data$Churn)
+```
+
+Dividiamo il dataset in training e test set, mantenendo la vera distribuzione dei dati. Dopodichè verrà trattato il problema delle classi sbilanciate.
+
+```{r}
+set.seed(1234)
+split <- sample(nrow(data), floor(0.7*nrow(data)))
+traindf <- data[split,]
+testdf <-  data[-split,]
+```
+
+Ci sono diverse tecniche per gestire le classi sbilanciate, tra le quali undersampling, oversampling o generazione di istanze sintetiche. Per questo lavoro si sceglie di procedere con la tecnica di generazione di nuove istanze, tramite libreria ROSE. (https://www.rdocumentation.org/packages/ROSE/versions/0.0-4/topics/ROSE)
+
+```{r}
+traindf_ROSE <- ROSE(Churn ~ ., data = traindf, seed = 1)$data2
+```
+
+```{r}
+table(traindf$Churn)
+```
+```{r}
+table(traindf_ROSE$Churn)
+```
+```{r}
+barplot(prop.table(table(traindf_ROSE$Churn)),
+        col = rainbow(2),
+        ylim = c(0, 1),
+        main = "Class Distribution")
+```
+
+Le classi ora risultano essere bilanciate. Procediamo ora alla stima dell'albero decisionale.
+
+
+```{r}
+fit <- rpart(
+  formula = Churn ~ .,
+  data    = traindf_ROSE,
+  method = "class"
+)
+```
+
+```{r}
+rpart.plot(fit, type=3, extra=106)
+  ```
+
+
+```{r}
+plotcp(fit)
+```
+
+```{r}
+pruned <- prune(fit, cp=0.016)
+preds <- predict(pruned, testdf, type = "class")
+```
+
+```{r}
+result <- table(testdf$Churn, preds)
+result
+```
+```{r}
+ sum(diag(result)) / sum(result)
+```
+```{r}
+summary(fit)
+```
+
+```{r}
+cm <- confusionMatrix(preds, reference =testdf$Churn, mode="prec_recall")
+cm
+```
+
+
+
+```{r}
+fit$variable.importance %>% 
+   data.frame() %>%
+   rownames_to_column(var = "Feature") %>%
+   rename(Overall = '.') %>%
+   ggplot(aes(x = fct_reorder(Feature, Overall), y = Overall)) +
+   geom_pointrange(aes(ymin = 0, ymax = Overall), color = "cadetblue", size = .3) +
+   theme_minimal() +
+   coord_flip() +
+   labs(x = "", y = "", title = "Variable Importance with Simple Classification")
+```
+
+
+```{r}
+accuracy_tune <- function(fit) {
+    preds <- predict(fit, testdf, type = 'class')
+    results <- table(testdf$Churn, preds)
+    accuracy_Test <- sum(diag(results)) / sum(results)
+    accuracy_Test
+}
+```
+
+```{r}
+control <- rpart.control(minsplit = 4,
+    minbucket = round(5 / 3),
+    maxdepth = 5,
+    cp = 0.011)
+tune_fit <- rpart(Churn~., data = traindf_ROSE, method = 'class', control = control)
+accuracy_tune(tune_fit)
+```
+```{r}
+rpart.plot(tune_fit)
+```
+
+
+```{r}
+bag_model <- train(
+   Churn ~ ., 
+   data = traindf_ROSE, 
+   nbagg = 100,
+   trControl = trainControl(method = "cv", number = 10),
+   method = "treebag",
+   control = rpart.control(minsplit = 2, cp = 0)
+   )
+bag_model
+```
+

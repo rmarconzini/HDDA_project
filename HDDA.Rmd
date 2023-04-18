@@ -36,8 +36,11 @@ Il *bagging* è un algoritmo piuttosto semplice nel quale b bootstrap samples ve
 $$\hat{f}_{bag} = \frac{1}{B} \sum_{b = 1}^{B}{\hat{f}_{b}(X)} $$
 
 
-Nel caso di classificazione il nostro modello produce un classificatore $\hat{G}(x)$ per una variabile con un numero di classi uguale a $K$, in cui $\hat{G}(x) = argmax_{k}\hat{f}(x)$.  :
+Nel caso di classificazione il nostro modello base produce un classificatore $\hat{G}(x)$ per una variabile con un numero di classi uguale a $K$, in cui $\hat{G}(x) = argmax_{k}\hat{f}(x)$, dove $\hat{f}(x)$ è una funzione vettore con un valore 1 e $K-1$ zeri. Nelle stime di bagging invece $\hat{f}_{bag}(x)$ è un vettore con $K$ valori, $p_{1}(x),..., p_{K}(x)$, dove $p_{k}(x)$ è la proporzione di alberi che hanno predetto la classe k per l'istanza $x$. Il classificatore di bagging prodotto sarà quindi il seguente:
 
+$\hat{G}_{bag}(x) = argmax_{k}\hat{f}_{bag}(x)$, dove verrà selezionata la classe con più "voti" fra i vari alberi costruiti.
+
+Inoltre, spesso nmel caso di classificazione è comune utilizzare le stime di probabilità di classe per l'istanza $x$, piuttosto che la classe prevista. In questo modo tramite il processo di bagging si andrà a mediare questè probabilità di classe ottenute per i vari modelli, piuttosto che selezionare la classe con più voti. In questo modo non otteniamo solo miglioramenti nelle stime di probabilità di classe (non più dovute alla proporzioni di alberi che prevedono una specifica classe), ma tende a produrre anche classificatori con più bassa varianza.
 
 Per via del processo di aggregazione, il bagging riduce la varianza di un base learner; tuttavia, il bagging non sempre riesce a migliorare le prestazioni del base learner. Infatti, il *bagging* funziona specialmente bene per instabili base learners con elevata varianza, nei quali gli output dei modelli riscontrano grandi cambiamenti in risposta a piccoli cambiamenti nel training dataset. Fra questi algoritmi sono sicuramente da evidenziare ad esempio gli alberi decisionali. Per quanto riguarda invece algoritmi più stabili o con un bias elevato, il bagging offre pochi miglioramenti sulle previsioni, dal momento che c'è poca variabilità. 
 

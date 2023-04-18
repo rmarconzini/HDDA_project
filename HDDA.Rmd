@@ -19,11 +19,14 @@ Il *bagging*, o bootstrap aggregation, è una procedura utilizzata per ridurre l
 
 ## Bootstrap
 
-Il *bagging* si basa sul metodo statistico del *bootstrapping*, che rende fattibile la valutazione di molte statistiche di modelli complessi.
+Il *bagging* si basa sul metodo statistico del *bootstrapping*, che è uno strumento utilizzato per valutare l'accuratezza statistica di un modello.
 
-Il *bootstrap* funziona nel seguente modo. Ipotizziamo la presenza di un campione $X$ di grandezza $N$. Possiamo creare un nuovo campione dal campione originale prelevando $N$ elementi da quest'ultimo in modo casuale e uniforme, con reinserimento. In altre parole, selezionamo casualmente elementi dal campione originale di grandezza $N$ e lo facciao $M$ volte. Ciascun elemento del campione ha la medesima probabilità di essere selezionato. Un aspetto sicuramente da notare è che reinserendo l'elemento appena selezionato per far parte del nuovo campione fra gli elementi selezionabili del campione originale, potrebbero esserci duplicati nel nuovo campione.
-Alla fine di questa procedura otteniamo così $M$ *bootstramp samples* $X_{1},..., X_{M}$, su cui è possibile calcolare varie statistiche della distribuzione originale.
+Il *bootstrap* funziona nel seguente modo. Ipotizziamo la presenza di un campione $X$ di grandezza $N$. Possiamo creare un nuovo campione dal campione originale prelevando $N$ elementi da quest'ultimo in modo casuale e uniforme, con reinserimento. In altre parole, selezionamo casualmente elementi dal campione originale di grandezza $N$ e lo facciao $B$ volte. Ciascun elemento del campione ha la medesima probabilità di essere selezionato. Un aspetto sicuramente da notare è che reinserendo l'elemento appena selezionato per far parte del nuovo campione fra gli elementi selezionabili del campione originale, potrebbero esserci duplicati nel nuovo campione.
+Alla fine di questa procedura otteniamo così $B$ *bootstramp samples* $X_{1},..., X_{B}$. Su ciascun bootstrap sample verrà addestrato il nostro modello e poi esaminato quanto bene riesce a prevedere l'originale training dataset. In questo modo è possibile ottenre una stima dell'errore di previsione. Considerando $\hat{f}^{*b}(x_{i})$ il valore previsto per l'istanza $x_{i}$ dal nostro modello per il $b-esimo$ boostrap sample, la stima dell'errore risultante sarà:
 
+$$\hat{Err}_{boot} = \frac{1}{B}\frac{1}{N} \sum_{b = 1}^{B} \sum_{i = 1}^{N}{L(y_{i}, \hat{f}^{*b}(x_{i}))} $$
+
+Tuttavia, è facile vedere come $\hat{Err}_{boot}$ non fornisce una buona stima in generale. Il motivo è che i boostrap samples, che agiscono come il training sample, e il training sample originale, che agisce come il test set, hanno osservazioni in comune.  Questa sovrapposizione può rendere le previsioni irrealisticamente buone ed è la ragione per cui il *cross-validation* utilizza esplicitamente dati non sovrapposti per il training e test set.
 
 ## Bagging
 

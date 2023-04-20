@@ -8,7 +8,7 @@ output: html_document
 
 # Abstract
 
-L'obiettivo di questo progetto è quello di approfondire la procedura di *bagging*. A tal fine, è stato dapprima condotto un approfondimento metodologico, per poi passare ad un'implementazione in R, sia per il task di classificazione che per quello di regressione. Per implementare il *bagging* è stato utilizzato il pacchetto *caret*. L'implementazione in R è stata così strutturata: una preliminare fase di analisi esplorativa del dataset, una seconda fase di selezione delle features sulla base di alcune caratteristiche di esse e successivamente testing e valutazione dei modelli. I modelli scelti per l'analisi sono gli alberi di decisione come weak learner, e le stime ottenute da essie ottenute sono state poi confrontate con quelle ottenute tramite procedura di *bagging* al fine di valutarne i benefici.
+L'obiettivo di questo progetto è quello di approfondire la procedura di *bagging*. A tal fine, è stato dapprima condotto un approfondimento metodologico, per poi passare ad un'implementazione in R, sia per il task di classificazione che per quello di regressione. Per implementare il *bagging* è stato utilizzato il pacchetto *caret*. L'implementazione in R è stata così strutturata: una preliminare fase di analisi esplorativa del dataset, una seconda fase di selezione delle features sulla base di alcune caratteristiche di esse e successivamente testing e valutazione dei modelli. I modelli scelti per l'analisi sono gli alberi decisionali come weak learner, e le stime ottenute da questi sono state poi confrontate con quelle ottenute tramite procedura di *bagging* al fine di valutarne i benefici.
 
 # Introduzione
 

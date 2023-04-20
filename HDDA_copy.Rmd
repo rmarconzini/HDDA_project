@@ -286,11 +286,14 @@ fit$variable.importance %>%
 
 Dal precedente grafico, che illustra l'importanza che le varie features hanno nello spiegare il comportamento della variabile target, sono sicuramente da evidenziare le variabili *Contract*, *PaymentMethod* e *MonthlyCharges*.
 
-In conclusione, gli alberi decisionali hanno diversi vantaggi: - richiedono poco pre-processing, questo non vuol dire che il feature engineering non migliori le prestazioni del modello, ma piuttosto che non ci sono particolari requisiti di pre-processing; - Solitamente gli outliers non distorgono tanto i risultati; - Gli alberi decisionali possono facilmente gestire categorical features senza pre-processing.
+In conclusione, gli alberi decisionali hanno diversi vantaggi: 
+-   Richiedono poco pre-processing, questo non vuol dire che il feature engineering non migliori le prestazioni del modello, ma piuttosto che non ci sono particolari requisiti di pre-processing.
+-   Solitamente gli outliers non distorgono tanto i risultati. 
+-   Gli alberi decisionali possono facilmente gestire categorical features senza pre-processing.
 
 Tuttavia, essi spesso non riescono a raggiungere ottimi risultati in termini di performance.
 
-## Bagging
+### Bagging
 
 I Bootstrap aggregating (*bagging*) prediction models sono un metodo generale per addestrare molteplici versioni di un modello di previsione e poi combinando (ensembling) i vari risultati in una previsione aggregata.
 
@@ -339,9 +342,6 @@ cs_scoreboard
 Confrontando il root mean squared error del modello di bagging con quello ottenuto dal decision tree, vediamo come siamo riusciti ad ottenere una buona riduzione dell'errore commesso dal precedente modello.
 
 
-
-
-
 ## Classificazione: Classification Tree
 
 Passiamo ora al task di classificazione. In questo caso vogliamo prevedere la variabile *Churn*, la quale assume valori "Yes", se il cliente ha abbandonato la compagnia, "No" nel caso in cui risulta ancora presente.
@@ -372,7 +372,7 @@ str(data)
 ```
 
 ```{r}
-categorical_var = c("gender", "SeniorCitizen", "Partner", "Dependents", "PhoneService", "InternetService", "Contract", "PaperlessBilling", "PaymentMethod")
+categorical_var = c("gender", "SeniorCitizen", "Partner", "Dependents", "PhoneService", "InternetService", "Contract", "PaperlessBilling", "PaymentMethod", "Churn")
 data[,categorical_var] <- lapply(data[,categorical_var] , as.factor)
 str(data)
 ```
@@ -417,7 +417,6 @@ testdf <-  data[-split,]
 Applichiamo l'algoritmo ROSE, Random Over-Sampling Examples, il quale genera sinteticamente nuovi campioni della classe minoritaria. Questa tecnica di sintesi di campioni è basata sull'algoritmo SMOTE (Synthetic Minority Over-sampling Technique), ma con alcune modifiche per migliorarne l'efficacia.
 
 ```{r}
-```{r}
 library(ROSE)
 
 traindf_ROSE <- ROSE(Churn ~ ., data = traindf, seed = 123)$data
@@ -432,7 +431,7 @@ barplot(prop.table(table(traindf_ROSE$Churn)),
 ```
 Dal grafico sovrastante, possiamo notare come il problema delle classi sbilanciate sia risolto. Passiamo ora all stima dell'albero di classificazione.
 
-## Albero di Classificazione
+### Albero di Classificazione
 
 
 ```{r}
@@ -447,6 +446,9 @@ fit <- rpart(
 ```{r}
 summary(fit)
 ```
+```{r}
+rpart.plot(fit, extra=108, type=5)
+```
 
 Il summary mostra i risultati dell'adattamento di un albero di decisione per la variabile di risposta Churn.
 Il modello ha un parametro di complessità di 0,433 e ha suddiviso il dataset in due nodi principali, uno con 1710 osservazioni e l'altro con 3212 osservazioni. Il nodo 1 ha una probabilità del 50,4% per la classe No e del 49,6% per la classe Yes, mentre il nodo 3 ha una probabilità del 33,5% per la classe No e del 66,5% per la classe Yes.
@@ -455,17 +457,65 @@ La variabile più importante per la suddivisione del nodo 1 è il tipo di contra
 
 Il modello utilizza anche variabili surrogate per la suddivisione dei nodi, come la durata del contratto e il metodo di pagamento per il nodo 1, e le spese mensili, il metodo di pagamento, il servizio telefonico e la fatturazione elettronica per il nodo 3.
 
+
+
 ```{r}
-rpart.plot(fit, extra=108, type=5)
+printcp(fit)
 ```
+
 
 ```{r}
 plotcp(fit)
 ```
-Il grafico di pruning complexity parameter (*cp*) illustra il relativo cross validation error (y-axis) per vari cp values (lower x-axis). Piccoli valori di *cp* portano ad alberi più grandi (upper x-axis). Osservando il grafico e analizzando il summar, scegliamo un cp pari a $0.02580909$
+Il grafico di pruning complexity parameter (*cp*) illustra il relativo cross validation error (y-axis) per vari cp values (lower x-axis). Piccoli valori di *cp* portano ad alberi più grandi (upper x-axis). Osservando il grafico e analizzando il summary, scegliamo un cp pari a $0.02580909$
 
 ```{r}
-pruned <- prune(fit, cp=0.02580909)
+pruned <- prune(fit, cp=0.025)
+```
+
+```{r}
+preds_train <- predict(pruned, traindf_ROSE, type = "class")
+confusionMatrix(preds_train, traindf_ROSE$Churn, positive = "Yes", mode="prec_recall")
+```
+Il valore di accuratezza sul training set risulta pari a $0.74$ con livelli di Precision e Recall accettabili. Valutiamo il livello di generalizzazione del modello, attraverso l'utilizzo del test set.
+
+```{r}
+preds_test <- predict(pruned, testdf, type = "class")
+confusionMatrix(preds_test, testdf$Churn, positive = "Yes", mode="prec_recall")
+```
+Il modello sembra generalizzare abbastanza bene, dal momento che il valore di accuracy risulta pari a $0.71$ in linea con il valore ottenuto sul training set. Notiamo comunque un lieve peggioramento delle performance, in quanto il valore di precision passa da $0.70$ a $0.47$, il che equivale ad un aumento di falsi positivi.
+
+```{r}
+pruned$variable.importance %>% 
+   data.frame() %>%
+   rownames_to_column(var = "Feature") %>%
+   rename(Overall = '.') %>%
+   ggplot(aes(x = fct_reorder(Feature, Overall), y = Overall)) +
+   geom_pointrange(aes(ymin = 0, ymax = Overall), color = "cadetblue", size = .3) +
+   theme_minimal() +
+   coord_flip() +
+   labs(x = "", y = "", title = "Variable Importance")
+```
+Il grafico mostra l'importanza delle variabili utilizzate per adattare l'albero di classificazione. Maggiore è il valore della metrica *Gini importance*, che valuta la riduzione del criterio di impurità di Gini che si ottiene quando una variabile viene utilizzata per dividere un nodo dell'albero, maggiore è l'importanza della variabile per la classificazione. In questo caso, la variabile più importante è "*Contract*" seguita da "*tenure*" e "*InternetService*".
+
+### Bagging
+
+```{r}
+cvcontrol <- trainControl(method = "repeatedcv", number = 10,
+allowParallel = TRUE)
+```
+
+```{r}
+set.seed(1234)
+bag_model <- train(
+   Churn ~ ., 
+   data = traindf_ROSE, 
+   nbagg = 150,
+   trControl = cvcontrol,
+   method = "treebag",
+   control = rpart.control(minsplit = 2, cp = 0)
+   )
+bag_model
 ```
 
 

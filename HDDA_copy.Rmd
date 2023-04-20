@@ -124,10 +124,10 @@ library(forcats)
 library(doParallel) 
 library(foreach)
 
-# data<- read.csv("/Users/lorenzobruni/Desktop/WA_Fn-UseC_-Telco-Customer-Churn.csv")
-data <- read.csv("churn.csv")
+data<- read.csv("/Users/lorenzobruni/Desktop/WA_Fn-UseC_-Telco-Customer-Churn.csv")
 data<-na.omit(data)
 ```
+
 
 ## Analisi esplorativa
 
@@ -338,8 +338,46 @@ cs_scoreboard
 
 Confrontando il root mean squared error del modello di bagging con quello ottenuto dal decision tree, vediamo come siamo riusciti ad ottenere una buona riduzione dell'errore commesso dal precedente modello.
 
+
+
+
+
 ## Classificazione: Classification Tree
-Passiamo ora al task di classificazione. In questo caso vogliamo prevedere la variabile *Churn*, la quale assume valori "Yes", se il cliente ha abbandonato la compagnia, "No" nel caso in cui risulta ancora presente. Come già detto in precedenza, la variabile presente un sbilanciamento marcato verso la classe "No", che rappresenta circa il 70% del totale delle osservazioni.
+
+Passiamo ora al task di classificazione. In questo caso vogliamo prevedere la variabile *Churn*, la quale assume valori "Yes", se il cliente ha abbandonato la compagnia, "No" nel caso in cui risulta ancora presente.
+
+```{r}
+data <- read.csv("churn.csv")
+data<-na.omit(data)
+```
+
+
+Un albero di classificazione è molto simile a un albero di regressione, ma viene utilizzato per prevedere una risposta qualitativa anziché quantitativa.
+
+Ricordiamo che per un albero di regressione, la risposta prevista per un'osservazione è data dalla risposta media delle osservazioni di traininf che appartengono allo stesso nodo terminale. Al contrario, per un albero di classificazione, si prevede che ogni osservazione appartenga alla classe di osservazioni di trainin più comunemente presente nella regione a cui appartiene.
+
+Nell'interpretare i risultati di un albero di classificazione, spesso si è interessati non solo alla previsione della classe corrispondente a una particolare regione del nodo terminale, ma anche alle proporzioni delle classi tra le osservazioni di training che rientrano in quella regione.
+
+Il compito di far costruire un albero di classificazione è abbastanza simile a quello di regressione. Come nel caso della regressione, per costurire un albero di classificazione si utilizza la suddivisione binaria ricorsiva. Tuttavia, nell'impostazione della classificazione, la *Residual Sum of Squares* non può essere utilizzata come criterio per effettuare le suddivisioni binarie. Si può invece utilizzare uno dei 3 metodi seguenti: Classification Error Rate, Indice di Gini, Cross-Entropy. 
+
+Quando si costruisce un albero di classificazione, per valutare la qualità di una particolare suddivisione si utilizzano in genere l'indice di Gini o la cross-entropy, poiché sono più sensibili alla "purezza" dei nodi rispetto al classification error rate. Per la potatura dell'albero si può utilizzare uno qualsiasi di questi tre approcci, ma il classification error rate è preferibile se l'obiettivo è l'accuracy.
+
+
+Dapprima vengono escluse le variabili in base a quanto detto in fase di esplorazione del dataset, e poi vengono trasformate le restanti variabili qualitive in *factor*:
+
+```{r}
+data <- subset(data,select=-c(customerID, MultipleLines, OnlineSecurity, OnlineBackup, DeviceProtection, TotalCharges, TechSupport, StreamingTV, StreamingMovies))
+
+str(data)
+```
+
+```{r}
+categorical_var = c("gender", "SeniorCitizen", "Partner", "Dependents", "PhoneService", "InternetService", "Contract", "PaperlessBilling", "PaymentMethod")
+data[,categorical_var] <- lapply(data[,categorical_var] , as.factor)
+str(data)
+```
+
+Come già detto in precedenza, la variabile presente un sbilanciamento marcato verso la classe "No", che rappresenta circa il 70% del totale delle osservazioni, come è possibile vedere in figura:
 
 ```{r}
 barplot(prop.table(table(Churn)),
@@ -347,7 +385,7 @@ barplot(prop.table(table(Churn)),
         ylim = c(0, 1),
         main = "Class Distribution")
 ```
-La presenza di classi sbilanciate, possono causare problemi nella fase di modellizzazione e di valutazione delle prestazioni del modello.
+La presenza di classi sbilanciate, può causare problemi nella fase di modellizzazione e di valutazione delle prestazioni del modello.
 
 In particolare, gli ostacoli associati al problema delle classi sbilanciate includono:
 
@@ -366,6 +404,69 @@ Per gestire il problema delle classi sbilanciate, ci sono diverse tecniche che p
 -   Utilizzo di algorirmi di classificazione *cost sentistive*: L'idea alla base di questa tecnica è quella di associare all'algoritmo di classificazione una matrice di costo, la quale può essere utilizzata per assegnare un costo maggiore alla classificazione errata della classe di minoranza rispetto alla classe di maggioranza. In questo modo, il modello sarà incentivato a dare più importanza alla classificazione corretta della classe di minoranza, in quanto l'errore in questa classe avrà un peso maggiore rispetto all'errore nella classe di maggioranza. Tuttavia, è importante notare che l'utilizzo di una matrice di costo richiede la conoscenza del costo associato a ciascuna combinazione di classificazione, il che può essere difficile da definire in alcuni casi. 
 
 Nel nostro caso, non potendo ipotizzare una adeguata matrice di costo e non essendo disposti a escludere troppe osservazioni tramite l'utilizzo di una tecnica di *undersampling*, si decide di procedere tramite un *oversampling* della classe minotaria. In particolare, in questo contesto verrà utilizzata la libreria *ROSE()*.
+
+Dividiamo dapprima il dataset in training e test set, mantenendo così la vera distribuzione dei dati per il test set. Dopodichè, verrà applicata la tecnica di oversampling sul dataset di training.
+
+```{r}
+set.seed(1234)
+split <- sample(nrow(data), floor(0.7*nrow(data)))
+traindf <- data[split,]
+testdf <-  data[-split,]
+```
+
+Applichiamo l'algoritmo ROSE, Random Over-Sampling Examples, il quale genera sinteticamente nuovi campioni della classe minoritaria. Questa tecnica di sintesi di campioni è basata sull'algoritmo SMOTE (Synthetic Minority Over-sampling Technique), ma con alcune modifiche per migliorarne l'efficacia.
+
+```{r}
+```{r}
+library(ROSE)
+
+traindf_ROSE <- ROSE(Churn ~ ., data = traindf, seed = 123)$data
+```
+
+
+```{r}
+barplot(prop.table(table(traindf_ROSE$Churn)),
+        col = rainbow(2),
+        ylim = c(0, 1),
+        main = "Class Distribution")
+```
+Dal grafico sovrastante, possiamo notare come il problema delle classi sbilanciate sia risolto. Passiamo ora all stima dell'albero di classificazione.
+
+## Albero di Classificazione
+
+
+```{r}
+fit <- rpart(
+  formula = Churn ~ .,
+  data    = traindf_ROSE,
+  method = "class"
+)
+```
+
+
+```{r}
+summary(fit)
+```
+
+Il summary mostra i risultati dell'adattamento di un albero di decisione per la variabile di risposta Churn.
+Il modello ha un parametro di complessità di 0,433 e ha suddiviso il dataset in due nodi principali, uno con 1710 osservazioni e l'altro con 3212 osservazioni. Il nodo 1 ha una probabilità del 50,4% per la classe No e del 49,6% per la classe Yes, mentre il nodo 3 ha una probabilità del 33,5% per la classe No e del 66,5% per la classe Yes.
+
+La variabile più importante per la suddivisione del nodo 1 è il tipo di contratto, mentre per il nodo 3 è il servizio Internet.
+
+Il modello utilizza anche variabili surrogate per la suddivisione dei nodi, come la durata del contratto e il metodo di pagamento per il nodo 1, e le spese mensili, il metodo di pagamento, il servizio telefonico e la fatturazione elettronica per il nodo 3.
+
+```{r}
+rpart.plot(fit, extra=108, type=5)
+```
+
+```{r}
+plotcp(fit)
+```
+Il grafico di pruning complexity parameter (*cp*) illustra il relativo cross validation error (y-axis) per vari cp values (lower x-axis). Piccoli valori di *cp* portano ad alberi più grandi (upper x-axis). Osservando il grafico e analizzando il summar, scegliamo un cp pari a $0.02580909$
+
+```{r}
+pruned <- prune(fit, cp=0.02580909)
+```
 
 
 # Conclusioni

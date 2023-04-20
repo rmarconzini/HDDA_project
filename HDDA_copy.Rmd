@@ -12,7 +12,7 @@ L'obiettivo di questo progetto è quello di approfondire la procedura di *baggin
 
 # Introduzione
 
-Il bootstrap aggregation, conosciuto anche come *bagging*, è un meta-algoritmo di apprendimento automatico progettato per migliorare la stabilità e l'accuratezza di algoritmi di statistical e machine learning utilizzati nei task di classificazione o regressione. Tale procedura viene utilizzata per ridurre la varianza e per evitare il fenomeno di overfitting. Il *bagging* si basa sul concetto di bootstrap, una procedura di ricampionamento che crea *b* nuovi bootstrap samples, i quali vengono costruiti mediante campionamento con reinserinento dal training set, e attraverso questi è possibile valutare l'accuratezza della stima di un parametro o di una previsione. Il *bagging* sfrutta proprio tale procedura per produrre stime più affidabili e robuste.
+Il bootstrap aggregation, conosciuto anche come *bagging*, è un meta-algoritmo di apprendimento automatico progettato per migliorare la stabilità e l'accuratezza di algoritmi di statistici e di machine learning utilizzati nei task di classificazione o regressione. Tale procedura viene utilizzata per ridurre la varianza e per evitare il fenomeno di overfitting. Il *bagging* si basa sul concetto di bootstrap, una procedura di ricampionamento che crea *b* nuovi bootstrap samples, i quali vengono costruiti mediante campionamento con reinserinento dal training set, e attraverso questi è possibile valutare l'accuratezza della stima di un parametro o di una previsione. Il *bagging* sfrutta proprio tale procedura per produrre stime più affidabili e robuste.
 
 # Ensemble methods
 

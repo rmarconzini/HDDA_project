@@ -2,7 +2,8 @@
 title: "Ensemble method"
 author: "Lorenzo"
 date: "2023-04-07"
-output: pdf_document
+output: html_document
+
 ---
 
 # Abstract
@@ -102,14 +103,9 @@ l processo di boosting si può descrivere nei seguenti passaggi:
 
 Tale procedura presenti diversi vantaggi, tra i quali un miglioramento delle performance del modello, minor rischio di overfitting (se viene utilizzata una tecnica di regolarizzazione) e presenta una certa adattibilità a dataset complessi o che presentano del rumore. C\'è da tenere in considerazione però che tale procedura ha una complessità computazionale notevole, poiché richiede l\'addestramento di molti weak learner in sequenza, oltre che essere difficile da interpretare a causa della sua complessità.
 
+# Implementazione in R
 
-
-
-
-
-
-
-# Prerequisiti
+## Librerie
 
 Faremo uso dei seguenti pacchetti per effettuare l'analisi sul dataset scelto.
 
@@ -133,23 +129,23 @@ data <- read.csv("churn.csv")
 data<-na.omit(data)
 ```
 
-# Analisi esplorativa
+## Analisi esplorativa
 
-In questa sezione, al fine di conoscere meglio il dataset con cui è stato condotto lo studio, è stata effettuata un'analisi esplorativa per indagare meglio la struttura delle variabili su cui basare il modello e per supportare le decisioni intraprese nella parte di feature selection.
+In questa sezione, è stata effettuata un'analisi esplorativa per indagare meglio la struttura delle variabili del dataset a disposizione su cui basare il modello e per supportare le decisioni intraprese nella parte di feature selection.
 
 ```{r, echo=FALSE}
 dim(data)
 str(data)
 ```
 
-Come possiamo vedere il dataset di churn scelto è composto da **7032** righe e **21** colonne. Fra queste abbiamo: *CustomerID*, *gender*, *SeniorCitizen* (variabile dicotomica che indica se il cliente è un cittadino anziano o no), *Partner*, *Dependents* (se il cliente ha persone a carico o meno), *tenure* (numero di mesi che il consumatore è rimasto con l'azienda), una serie di variabili legate hai servizi del cliente (*PhoneService*, *MultipleLines*, *InternetService*, *OnlineSecurity*, *OnlineBackup*, *DeviceProtection*, *TechSupport*, *StreamingTV*, *StreamingMovies*), *Contract* (variabile che indici i termini del contratto del cliente), *PaperlessBilling* (se il cliente ha o meno una fatturazione senza carta), *PaymentMethod*, *MonthlyCharges* (l'importo addebitato mensilmente al cliente), *TotalCharges* (l'importo totale addebitato al cliente), *Churn.*
+Il dataset è composto da **7032** righe e **21** colonne. Fra queste abbiamo: *CustomerID*, *gender*, *SeniorCitizen* (variabile dicotomica che indica se il cliente è un cittadino anziano o no), *Partner*, *Dependents* (se il cliente ha persone a carico o meno), *tenure* (numero di mesi che il consumatore è rimasto cliente dell'azienda), una serie di variabili legate hai servizi del cliente (*PhoneService*, *MultipleLines*, *InternetService*, *OnlineSecurity*, *OnlineBackup*, *DeviceProtection*, *TechSupport*, *StreamingTV*, *StreamingMovies*), *Contract* (variabile che indici i termini del contratto del cliente), *PaperlessBilling* (se il cliente ha o meno una fatturazione senza carta), *PaymentMethod*, *MonthlyCharges* (l'importo addebitato mensilmente al cliente), *TotalCharges* (l'importo totale addebitato al cliente), *Churn*.
 
 ```{r}
 summary(data$tenure)
 sd(data$tenure)
 ```
 
-Particolarmente interessante per la nostra analisi di regressione è lo studio della variabile target *tenure*. Come possiamo vedere la deviazione standard di questa variabile è molto elevato pari a **24.5**, con una media di **32.4**.
+Particolarmente interessante per la nostra analisi di regressione è lo studio della variabile target *tenure*. Come possiamo vedere la deviazione standard di questa variabile è pari a **24.5**, con una media di **32.4**.
 
 ```{r, echo=FALSE}
 ggplot(data = data, aes(x = "", y = tenure)) + 
@@ -158,8 +154,10 @@ ggplot(data = data, aes(x = "", y = tenure)) +
        y='Tenure',x='')+
   coord_cartesian()
 ```
+L'analisi del boxplot relativo alla variabile target, mostra come tale variabile presenti un'elevata variabilità.
 
-Possiamo visualizzare l'elevata variabilità di questa variabile anche dallo studio del relativo boxplot presente nella precedente figura.
+
+
 
 ```{r, echo=FALSE}
 df <- data %>%
@@ -172,7 +170,9 @@ ggplot(df, aes(x = Churn, y = counts)) +
   labs(title = 'Churn distribution')
 ```
 
-Inoltre, per quanto riguarda la variabile di *churn* vediamo dal precedente grafico come il numero di clienti che hanno effettuato il churn sia nettamente inferiore rispetto a coloro che non lo hanno fatto.
+Inoltre, per quanto riguarda la variabile di *churn*, la quale risulterà essere la variabile target per il task di classificazione, si nota come essa sia particolarmente sbilanciata, con un numero di clienti che hanno effettuato il churn nettamente inferiore rispetto a coloro che non lo hanno fatto.
+
+Analizziamo ora, il comportamento della variabile *churn* condizionata ai valori della variabile *tenure*:
 
 ```{r, echo=FALSE}
 ggplot(data = data, aes(x=Churn,y=tenure, fill=Churn)) + 
@@ -182,7 +182,9 @@ ggplot(data = data, aes(x=Churn,y=tenure, fill=Churn)) +
        y='tenure',x='Churn')
 ```
 
-Dal precedente grafico è possibile vedere che la variabile *tenure* è una variabile potenzialmente utile nelllo spiegare il comportamento di *churn* dei clienti, indicando che clienti con un numero di mesi trascorsi con l'azienda maggiore presentano una minore probabilità di abbandono.
+Dal precedente grafico possiamo notare come la variabile *tenure* sia una variabile potenzialmente utile nelllo spiegare il comportamento della variabile *churn*, indicando che clienti con un numero di mesi trascorsi con l'azienda maggiore presentano una minore probabilità di abbandono.
+
+Mentre, analizzando il comportamento della variabile *churn* condizionata alla variabile *TotalCharges*:
 
 ```{r, echo=FALSE}
 ggplot(data = data, aes(x=Churn,y=TotalCharges, fill=Churn)) + 
@@ -192,7 +194,10 @@ ggplot(data = data, aes(x=Churn,y=TotalCharges, fill=Churn)) +
        y='TotalCharges',x='Churn')
 ```
 
-Come possiamo vedere dal grafico sovrastante la variabile *TotalCharges* rappresenta anch'essa un fattore potenzialmente determinante nello spiegare il comportamento della variabile di *Churn*. Maggiore l'ammontare totale speso, minore la probabilità di abbandono.
+
+Notiamo come la variabile *TotalCharges* rappresenta anch'essa un fattore potenzialmente determinante nello spiegare il comportamento della variabile di *Churn*. Maggiore l'ammontare totale speso, minore la probabilità di abbandono.
+
+Infine, mostriamo il comportamento della variabile *churn* condizionata ai valori della variabile *MonthlyCharges*:
 
 ```{r, echo=FALSE}
 ggplot(data = data, aes(x=Churn,y=MonthlyCharges, fill=Churn)) + 
@@ -201,16 +206,19 @@ ggplot(data = data, aes(x=Churn,y=MonthlyCharges, fill=Churn)) +
   labs(title = 'Churn vs MonthlyCharges',
        y='MonthlyCharges',x='Churn')
 ```
+Analizziamo ora, la correlazione tra le variabili *TotalCharges* e *MonthlyCharges*:
 
-Dal precedente grafico vediamo invece la relazione tra le variabili *Churn* e *MonthlyCharges*.
+```{r}
+cor(TotalCharges, MonthlyCharges)
+```
 
-Data la dipendenza tra le variabili *TotalCharges* e *MonthlyCharges*, decidiamo di escludere una delle due variabili e teniamo per l'analisi la variabile *MonthlyCharges*.
+Data la dipendenza abbastanza marcata tra le variabili *TotalCharges* e *MonthlyCharges*, decidiamo di escludere una delle due variabili e teniamo per l'analisi la variabile *MonthlyCharges*.
 
 Ragionamento simile per le variabili *Phoneservice* e *MultipleLines* nel quale la seconda è inevitabilmente legata ai valori assunti dalla prima. Decidiamo così di includere nell'analisi solo la variabile *Phoneservice*.
 
 Lo stesso ragionamento è stato effettuato per quanto riguarda il legame tra la variabile *InternetService* e le variabili *OnlineSecurity*, *OnlineBackup*, *DeviceProtection*, *TechSupport*, *StreamingTV*, *StreamingMovies*. Anche in questo caso decidiamo di tenere in considerazione esclusivamente la variabile *InternetService* poichè i valori assunti dalle altre variabili risultano influenzati dai valori di quest'ultima.
 
-# Analisi di Regressione
+## Analisi di Regressione: Regression Tree
 
 L'analisi di regressione viene effetuata cercando di prevedere i valori assunti dalla variabile *tenure* mediante l'utilizzo delle altre variabili rimaste come regressori.
 
@@ -222,9 +230,9 @@ traindf <- data[split,]
 testdf <-  data[-split,]
 ```
 
-## Albero di regressione
+### Albero di regressione
 
-Come detto in precedenza il modello semplice che decidiamo di utilizzare come weak-learner è l'albero decisionale. Per la costruzione dell'albero di regressione usiamo la funzione *rpart()* contenuta nel pacchetto rpart, dopodiché per la visualizzazione dell'albero utilizziamo la funzione *rpart.plot()*. Il processo di addestramento e visualizzazione del modello è molto simile sia per la parte di regressione che per quella di classificazione.
+Come detto in precedenza il modello che decidiamo di utilizzare come weak-learner è l'albero decisionale. Per la costruzione dell'albero di regressione usiamo la funzione *rpart()* contenuta nel pacchetto rpart, dopodiché per la visualizzazione dell'albero utilizziamo la funzione *rpart.plot()*. Il processo di addestramento e visualizzazione del modello è molto simile sia per la parte di regressione che per quella di classificazione.
 
 ```{r}
 fit <- rpart(
@@ -240,7 +248,7 @@ rpart.plot(fit)
 
 La variabile che decreta il primo split (cioè la variaile che retituisce la più grande riduzione nel SSE) è *Contract*.
 
-Visualizzando il modello ad albero con *rpart.plot()*, una cosa che si può notare è che l'albero contiene 6 nodi interni e 7 risultanti nodi terminali.
+Visualizzando il modello ad albero con *rpart.plot()*, possiamo notare che l'albero contiene 6 nodi interni e 7 risultanti nodi terminali.
 
 Di default *rpart()* automaticamente applica un range di valori di cost complexity (*cp* values) per potare l'albero. Per confrontare l'errore associato a ciascun *cp* value, *rpart()* performa un 10-fold CV.
 
@@ -262,7 +270,7 @@ rmse
 
 Il root mean square error ottenuto valutando il modello finale sul test set è pari a **17.5**. Considerando che lo scarto quadratico medio per la variabile *tenure* come visto in precedenza è **24.5**, il risultato ottenuto dal nostro modello può essere considerato soddisfacente.
 
-Per misurare l'importanza che le varie features assumono nello spiegare il comportamento della variabile target, viene considerata la riduzione nella funzione di perdita (ovvero, SSE) attribuita ad ogni variabile ad ogni split. In alcuni casi, una variable potrebbe essere usata molte volte in un albero; di conseguenza, la riduzione totale nella funzione di perdita causata da una variabile nei vari split sono sommate e usate per la feature importance. Gli alberi decisionali eseguono automaticamente feature selection dal momento che le features non informative non vengono usate dal modello.
+Per misurare l'importanza che le varie features assumono nello spiegare il comportamento della variabile target, viene considerata la riduzione nella funzione di perdita (ovvero, SSE) attribuita ad ogni variabile ad ogni split. In alcuni casi, una variable potrebbe essere usata molte volte in un albero; di conseguenza, la riduzione totale nella funzione di perdita causata da una variabile nei vari split sono sommate e usate per la eature importance. Gli alberi decisionali eseguono automaticamente feature selection dal momento che le features non informative non vengonfo usate dal modello.
 
 ```{r, echo=FALSE}
 fit$variable.importance %>% 
@@ -286,7 +294,7 @@ Tuttavia, essi spesso non riescono a raggiungere ottimi risultati in termini di 
 
 I Bootstrap aggregating (*bagging*) prediction models sono un metodo generale per addestrare molteplici versioni di un modello di previsione e poi combinando (ensembling) i vari risultati in una previsione aggregata.
 
-La performance ottimale è spesso trovata unendo 50--500 alberi. Dataset con pochi previsori richiedono spesso meno alberi; mentre i set di dati con molto rumore o più predittori forti potrebbero aver bisogno di più alberi.
+La performance ottimale è spesso trovata unendo dai 50 ai 500 alberi. Dataset con pochi predittori richiedono spesso meno alberi; mentre i set di dati con molto rumore o più predittori forti potrebbero aver bisogno di più alberi.
 
 Per questa analisi decidiamo di utilizzare 100 alberi non potati (non potando gli alberi stiamo mantenendo una bassa distorsione ma un elevata varianza ed è in questo caso che è possibile ottenere un effetto maggiore dal bagging). Una cosa da notare è che tipicamente, più alberi vengono utilizzati e migliore saranno la prestazioni del modello di bagging, dal momento che aggiungendo più alberi mediamo tra più modelli decisionali ad elevata varianza. Tipicamente, l'errore di previsione si appiattisce e si stabilizza una volta raggiunto un numero adeguato di alberi. Spesso, sono necessari circa 50--100 alberi per stabilizzare l'errore (in altri casi sono necessari 500 o più).
 
@@ -329,6 +337,36 @@ cs_scoreboard
 ```
 
 Confrontando il root mean squared error del modello di bagging con quello ottenuto dal decision tree, vediamo come siamo riusciti ad ottenere una buona riduzione dell'errore commesso dal precedente modello.
+
+## Classificazione: Classification Tree
+Passiamo ora al task di classificazione. In questo caso vogliamo prevedere la variabile *Churn*, la quale assume valori "Yes", se il cliente ha abbandonato la compagnia, "No" nel caso in cui risulta ancora presente. Come già detto in precedenza, la variabile presente un sbilanciamento marcato verso la classe "No", che rappresenta circa il 70% del totale delle osservazioni.
+
+```{r}
+barplot(prop.table(table(Churn)),
+        col = rainbow(2),
+        ylim = c(0, 1),
+        main = "Class Distribution")
+```
+La presenza di classi sbilanciate, possono causare problemi nella fase di modellizzazione e di valutazione delle prestazioni del modello.
+
+In particolare, gli ostacoli associati al problema delle classi sbilanciate includono:
+
+-   *Prestazioni del modello*: se la classe di minoranza è sotto-rappresentata, il modello potrebbe essere meno preciso e meno affidabile nella classificazione di questa classe rispetto alla classe di maggioranza, poiché il modello tende ad assegnare la classe maggioritaria alla maggior parte delle osservazioni.
+
+-   *Bias di valutazione*: se si utilizzano metriche di valutazione del modello che non tengono conto dello sbilanciamento delle classi (ad esempio l'accuratezza), si potrebbe ottenere una valutazione del modello che non rispecchia la sua vera capacità di classificazione.
+
+-   *Overfitting*: se la classe di minoranza è poco rappresentata, il modello potrebbe soffrire di overfitting, ovvero potrebbe adattarsi eccessivamente ai dati di training, ma non generalizzare adeguatamente sui dati di test.
+
+Per gestire il problema delle classi sbilanciate, ci sono diverse tecniche che possono essere utilizzate, tra cui:
+
+-   *Oversampling* della classe di minoranza: consiste nell'aumentare il numero di campioni della classe di minoranza, ad esempio mediante tecniche di replicazione o sintesi di campioni.
+
+-   *Undersampling* della classe di maggioranza: consiste nel ridurre il numero di campioni della classe di maggioranza, ad esempio mediante tecniche di campionamento casuale.
+
+-   Utilizzo di algorirmi di classificazione *cost sentistive*: L'idea alla base di questa tecnica è quella di associare all'algoritmo di classificazione una matrice di costo, la quale può essere utilizzata per assegnare un costo maggiore alla classificazione errata della classe di minoranza rispetto alla classe di maggioranza. In questo modo, il modello sarà incentivato a dare più importanza alla classificazione corretta della classe di minoranza, in quanto l'errore in questa classe avrà un peso maggiore rispetto all'errore nella classe di maggioranza. Tuttavia, è importante notare che l'utilizzo di una matrice di costo richiede la conoscenza del costo associato a ciascuna combinazione di classificazione, il che può essere difficile da definire in alcuni casi. 
+
+Nel nostro caso, non potendo ipotizzare una adeguata matrice di costo e non essendo disposti a escludere troppe osservazioni tramite l'utilizzo di una tecnica di *undersampling*, si decide di procedere tramite un *oversampling* della classe minotaria. In particolare, in questo contesto verrà utilizzata la libreria *ROSE()*.
+
 
 # Conclusioni
 

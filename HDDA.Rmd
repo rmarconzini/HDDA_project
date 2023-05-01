@@ -7,46 +7,37 @@ output: pdf_document
 
 # Abstract
 
-
-L'obiettivo di questo progetto è approfondire la procedura di *bagging*. Al fine di approfondire il funzionamento di questa tecnica è stata effettuata un'implementazione in R, sia per l'obiettivo di classificazione che per quello di regressione. Per implementare il *bagging* è stato utilizzato il pacchetto *caret*. Il lavoro è stato così strutturato: una preliminare fase di analisi esplorativa del dataset, una seconda fase di selezione delle features sulla base di alcune caratteristiche di esse e successivamente testing e valutazione dei modelli. I modelli scelti per l'analisi sono gli alberi di decisione come weak learner e le stime ottenute da essi sono state poi confrontate con quelle ottenute dalla procedura di *bagging* al fine di valutarne i benefici.  
-
+L'obiettivo di questo progetto è approfondire la procedura di *bagging*. Al fine di approfondire il funzionamento di questa tecnica è stata effettuata un'implementazione in R, sia per l'obiettivo di classificazione che per quello di regressione. Per implementare il *bagging* è stato utilizzato il pacchetto *caret*. Il lavoro è stato così strutturato: una preliminare fase di analisi esplorativa del dataset, una seconda fase di selezione delle features sulla base di alcune caratteristiche di esse e successivamente testing e valutazione dei modelli. I modelli scelti per l'analisi sono gli alberi di decisione come weak learner e le stime ottenute da essi sono state poi confrontate con quelle ottenute dalla procedura di *bagging* al fine di valutarne i benefici.
 
 # Introduzione
 
-
-Il *bagging*, o bootstrap aggregation, è una procedura utilizzata per ridurre la varianza di un metodo di apprendimento statistico. Tale tecnica si basa sul concetto di bootstrap, una procedura di ricampionamento che crea b nuovi bootstrap samples, campioni con reinserinento provenienti dal training set, e attraverso questi è possibile valutare l'accuratezza della stima di un parametro o di una previsione. Il *bagging* sfrutta proprio tale procedura per migliorare le stime o la stessa previsione. 
-
+Il *bagging*, o bootstrap aggregation, è una procedura utilizzata per ridurre la varianza di un metodo di apprendimento statistico. Tale tecnica si basa sul concetto di bootstrap, una procedura di ricampionamento che crea b nuovi bootstrap samples, campioni con reinserinento provenienti dal training set, e attraverso questi è possibile valutare l'accuratezza della stima di un parametro o di una previsione. Il *bagging* sfrutta proprio tale procedura per migliorare le stime o la stessa previsione.
 
 #Ensemble methods
 
 Gli Ensemble methods sono tecniche che creano molteplici modelli e poi li combinano per produrre risultati migliorati. I modelli che vengono forniti in input sono chiamati *weak larners*. Questa tecnica è in grado di migliorare l'accuratezza delle previsioni dei weak learners a spese però della loro interpretabilità e di un aumento del tempo di computazione. Ad esempio, gli alberi di classificazione e regressione sono semplici e utili per l'interpretazione, tuttavia non sono competitivi con altri approcci in termini di accuratezza delle previsioni. Il bagging, che fa parte di questa categoria di algoritmi, crescendo molteplici alberi è in grado di ottenere dei miglioramenti nei risultati delle previsioni a spese di una perdita dell'interpretabilità del modello.
 
-
 ## Bootstrap
 
 Il *bagging* si basa sul metodo statistico del *bootstrapping*, che è uno strumento utilizzato per valutare l'accuratezza statistica di un modello.
 
-Il *bootstrap* funziona nel seguente modo. Ipotizziamo la presenza di un campione $X$ di grandezza $N$. Possiamo creare un nuovo campione dal campione originale prelevando $N$ elementi da quest'ultimo in modo casuale e uniforme, con reinserimento. In altre parole, selezioniamo casualmente elementi dal campione originale di grandezza $N$ e lo facciao $B$ volte. Ciascun elemento del campione ha la medesima probabilità di essere selezionato. Un aspetto sicuramente da notare è che reinserendo l'elemento appena selezionato per far parte del nuovo campione fra gli elementi selezionabili del campione originale, potrebbero esserci duplicati nel nuovo campione.
-Alla fine di questa procedura otteniamo così $B$ *bootstramp samples* $X_{1},..., X_{B}$. Su ciascun bootstrap sample verrà addestrato il nostro modello e poi esaminato quanto bene riesce a prevedere l'originale training dataset. In questo modo è possibile ottenere una stima dell'errore di previsione. Considerando $\hat{f}^{*b}(x_{i})$ il valore previsto per l'istanza $x_{i}$ dal nostro modello per il $b-esimo$ boostrap sample, la stima dell'errore risultante sarà:
+Il *bootstrap* funziona nel seguente modo. Ipotizziamo la presenza di un campione $X$ di grandezza $N$. Possiamo creare un nuovo campione dal campione originale prelevando $N$ elementi da quest'ultimo in modo casuale e uniforme, con reinserimento. In altre parole, selezioniamo casualmente elementi dal campione originale di grandezza $N$ e lo facciao $B$ volte. Ciascun elemento del campione ha la medesima probabilità di essere selezionato. Un aspetto sicuramente da notare è che reinserendo l'elemento appena selezionato per far parte del nuovo campione fra gli elementi selezionabili del campione originale, potrebbero esserci duplicati nel nuovo campione. Alla fine di questa procedura otteniamo così $B$ *bootstramp samples* $X_{1},..., X_{B}$. Su ciascun bootstrap sample verrà addestrato il nostro modello e poi esaminato quanto bene riesce a prevedere l'originale training dataset. In questo modo è possibile ottenere una stima dell'errore di previsione. Considerando $\hat{f}^{*b}(x_{i})$ il valore previsto per l'istanza $x_{i}$ dal nostro modello per il $b-esimo$ boostrap sample, la stima dell'errore risultante sarà:
 
 $$\hat{Err}_{boot} = \frac{1}{B}\frac{1}{N} \sum_{b = 1}^{B} \sum_{i = 1}^{N}{L(y_{i}, \hat{f}^{*b}(x_{i}))} $$
 
-Tuttavia, è facile vedere come $\hat{Err}_{boot}$ non fornisce una buona stima in generale. Il motivo è che i boostrap samples, che agiscono come il training sample, e il training sample originale, che agisce come il test set, hanno osservazioni in comune.  Questa sovrapposizione può rendere le previsioni irrealisticamente buone ed è la ragione per cui il *cross-validation* utilizza esplicitamente dati non sovrapposti per il training e test set.
+Tuttavia, è facile vedere come $\hat{Err}_{boot}$ non fornisce una buona stima in generale. Il motivo è che i boostrap samples, che agiscono come il training sample, e il training sample originale, che agisce come il test set, hanno osservazioni in comune. Questa sovrapposizione può rendere le previsioni irrealisticamente buone ed è la ragione per cui il *cross-validation* utilizza esplicitamente dati non sovrapposti per il training e test set.
 
 Un possibile miglioramento è dato dal calcolare $\hat{Err}_{boot}$ solo per quelle osservazioni che non sono incluse nel bootstrap dataset. Un'altra soluzione che offre un possibile miglioramento è data invece dal "Leave-one-out bootstrap", in cui la previsione $\hat{f}^{*b}(x_{i})$ è basata solo sul set di dati che non contiene $x_{i}$ e dove $C^{-i}$ è il set di indici del bootstrap sample che non contiene l'osservazione $i$:
 
 $$\hat{Err}_{boot} = \frac{1}{n} \sum_{b = 1}^{B}{\frac{1}{|C^{-i}|}} \sum_{b\epsilon C^{-i}}{(y_{i}-\hat{f}^{*b}(x_{i}))^{2}} $$
 
-
 ## Bagging
 
 I bootstrap aggregating (*bagging*) prediction models sono quindi metodi generali per addestrare molteplici versioni di un modello di previsione e poi combinare (*ensembling*) queste in un unica previsione aggregata. Come detto in precedenza, il *bagging* è designato per migliorare la stabilità e accuratezza degli algoritmi di regressione e classificazione, infatti mediante la media il *bagging* riesce a ridurre la varianza e minimizzare l'overfitting. Nel caso appunto di regressione, il mean squared error atteso di uno stimatore può essere decomposto in termini di distorsione, varianza e rumore. La parte di distorsione misura l'ammontare medio con il quale le previsioni di uno stimatore differiscono dalle previsioni dello stimatore migliore possibile per il problema. La parte di varianza misura la variabilità delle previsioni di uno stimatore quando lo addestriamo fra diverse istanze del solito problema. Infine, il rumore caratterizza la parte irriducibile dell'errore che è dovuta alla variabilità nei dati.
 
-
 Il *bagging* è un algoritmo piuttosto semplice nel quale b bootstrap samples vengono creati dal training data, l'algoritmo di classificazione o regressione (solitamente chiamato base learner o weak learner) viene applicato ad ogni bootstrap sample e, nel caso della regressione, le nuove previsioni sono generate mediando le previsioni dei vari base learners eseguiti in maniera indipendente. Quando trattiamo invece il caso di classificazione, le previsioni dei base learner sono combinated usando la classe più votata o mediando le probabilità delle varie classi stimate. Questo processo è rappresentato nel caso di regressione dalla seguente equazione dove $X$ rappreesenta il record per il quale si vuole generare una previsione, $\hat{f}_{bag}$ è la previsione del bagged model, mentre $\hat{f}_{1}(X)$, $\hat{f}_{2}(X)$,..., $\hat{f}_{B}(X)$ sono le previsioni dei base learners:
 
 $$\hat{f}_{bag} = \frac{1}{B} \sum_{b = 1}^{B}{\hat{f}_{b}(X)} $$
-
 
 Nel caso di classificazione il nostro modello base produce un classificatore $\hat{G}(x)$ per una variabile con un numero di classi uguale a $K$, in cui $\hat{G}(x) = argmax_{k}\hat{f}(x)$, dove $\hat{f}(x)$ è una funzione vettore con un valore intero e $K-1$ zeri. Nelle stime di bagging invece $\hat{f}_{bag}(x)$ è un vettore con $K$ valori, $p_{1}(x),..., p_{K}(x)$, dove $p_{k}(x)$ è la proporzione di alberi che hanno predetto la classe k per l'istanza $x$. Il classificatore di bagging prodotto sarà quindi il seguente:
 
@@ -66,16 +57,13 @@ In questo modo non otteniamo solo miglioramenti nelle stime di probabilità di c
 
 Per via del processo di aggregazione, il bagging riduce la varianza di un base learner; tuttavia, il bagging non sempre riesce a migliorare le prestazioni del base learner. Infatti, il *bagging* funziona specialmente bene per base learners instabili con elevata varianza, nei quali gli output dei modelli riscontrano grandi cambiamenti in risposta a piccoli cambiamenti nel training dataset. Fra questi algoritmi sono sicuramente da evidenziare ad esempio gli alberi decisionali. Per quanto riguarda invece algoritmi più stabili o con un bias elevato, il bagging offre pochi miglioramenti sulle previsioni, dal momento che c'è poca variabilità. Inoltre, *bagging* un buon classificatore può migliorare l'accuratezza previsiva, ma *bagging* uno sbagliato può portare seri peggioramenti nell'accuratezza previsiva.
 
-
 L'idea generale dietro il bagging fa riferimento alla "saggezza del popolo". Essenzialmente significa che l'aggregazione di informazioni in gruppi ampi e diversi porta a decisioni che spesso sono migliori di quelle che avrebbero potuto essere prese da un singolo membro del gruppo. Più diversi sono i membri del gruppo, più diverse saranno le loro prospettive e previsioni, il che spesso porta a una migliore aggregazione delle informazioni.
-
 
 Come detto il bagging viene quindi solitamente applicato agli alberi decisionali. Ciascun albero associato ad ogni bootstrap sample solitamente coinvolgerà differenti features rispetto all'originale e potrebbe avere un numero diverso di nodi terminali.
 
 Inoltre con il processo di bagging usare tanti alberi non porta all'overfitting, ma è importante realizzare che, dal momento che molteplici modelli vengono fatti girare, per numerose iterazioni il costo computazionale e il tempo richiesto sarà elevato. Infatti, stiamo essenzialmente moltiplicando il lavoro di crescita di un singolo albero per $B$. Inoltre un altro svantaggio del bagging è dato dalla perdita di interpretabilità, dal momento che il risultato finale non è più un albero e quindi perdiamo l'abilità interpretativa di un albero decisionale.
 
 Un ulteriore beneficio del *bagging* si basa sul ricampionamento con reinserimento. Dal momento che i bagged tree fanno uso di circa i 2/3 delle osservazioni originali, è possibile fornire la stima interna della performance previsiva del modelllo utilizzando *out-of-bag* (OOB) sample. Ad esempio, per l'osservazione i-esima verranno utilizzati gli alberi che non contengono quella osservazione nel campione su cui sono stati costruiti. Per ciascuna osservazione avremo quindi circa B/3 previsioni che medieremo e la stima ottenuta è sostanzialmente il LOOCV error per il bagging, se B è abbastanza grande. Di conseguenza, come il dataset diventa più grande e le iterazioni del bagging crescono, è comune usare la stima dell'errore tramite *OOB* come proxy per la performance previsiva del modello.
-
 
 ## Boosting e differenze con il bagging
 
@@ -104,7 +92,7 @@ data<- read.csv("/Users/lorenzobruni/Desktop/WA_Fn-UseC_-Telco-Customer-Churn.cs
 data<-na.omit(data)
 ```
 
-#Analisi esplorativa
+# Analisi esplorativa
 
 In questa sezione, al fine di conoscere meglio il dataset con cui è stato condotto lo studio, è stata effettuata un'analisi esplorativa per indagare meglio la struttura delle variabili su cui basare il modello e per supportare le decisioni intraprese nella parte di feature selection.
 
@@ -112,7 +100,8 @@ In questa sezione, al fine di conoscere meglio il dataset con cui è stato condo
 dim(data)
 str(data)
 ```
-Come possiamo vedere il dataset di churn scelto è composto da **7032** righe e **21** colonne. Fra queste abbiamo: *CustomerID*, *gender*, *SeniorCitizen* (variabile dicotomica che indica se il cliente è un cittadino anziano o no), *Partner*, *Dependents* (se il cliente ha persone a carico o meno), *tenure* (numero di mesi che il consumatore è rimasto con l'azienda), una serie di variabili legate hai servizi del cliente (*PhoneService*, *MultipleLines*, *InternetService*, *OnlineSecurity*, *OnlineBackup*, *DeviceProtection*, *TechSupport*, *StreamingTV*, *StreamingMovies*),  *Contract* (variabile che indici i termini del contratto del cliente), *PaperlessBilling* (se il cliente ha o meno una fatturazione senza carta), *PaymentMethod*, *MonthlyCharges* (l'importo addebitato mensilmente al cliente), *TotalCharges* (l'importo totale addebitato al cliente), *Churn.*
+
+Come possiamo vedere il dataset di churn scelto è composto da **7032** righe e **21** colonne. Fra queste abbiamo: *CustomerID*, *gender*, *SeniorCitizen* (variabile dicotomica che indica se il cliente è un cittadino anziano o no), *Partner*, *Dependents* (se il cliente ha persone a carico o meno), *tenure* (numero di mesi che il consumatore è rimasto con l'azienda), una serie di variabili legate hai servizi del cliente (*PhoneService*, *MultipleLines*, *InternetService*, *OnlineSecurity*, *OnlineBackup*, *DeviceProtection*, *TechSupport*, *StreamingTV*, *StreamingMovies*), *Contract* (variabile che indici i termini del contratto del cliente), *PaperlessBilling* (se il cliente ha o meno una fatturazione senza carta), *PaymentMethod*, *MonthlyCharges* (l'importo addebitato mensilmente al cliente), *TotalCharges* (l'importo totale addebitato al cliente), *Churn.*
 
 ```{r}
 summary(data$tenure)
@@ -154,7 +143,6 @@ ggplot(data = data, aes(x=Churn,y=tenure, fill=Churn)) +
 
 Dal precedente grafico è possibile vedere che la variabile *tenure* è una variabile potenzialmente utile nelllo spiegare il comportamento di *churn* dei clienti, indicando che clienti con un numero di mesi trascorsi con l'azienda maggiore presentano una minore probabilità di abbandono.
 
-
 ```{r, echo=FALSE}
 ggplot(data = data, aes(x=Churn,y=TotalCharges, fill=Churn)) + 
   geom_boxplot()+
@@ -175,17 +163,15 @@ ggplot(data = data, aes(x=Churn,y=MonthlyCharges, fill=Churn)) +
 
 Dal precedente grafico vediamo invece la relazione tra le variabili *Churn* e *MonthlyCharges*.
 
-Data la dipendenza tra le variabili *TotalCharges* e *MonthlyCharges*, decidiamo di escludere una delle due variabili e teniamo per l'analisi la variabile *MonthlyCharges*. 
+Data la dipendenza tra le variabili *TotalCharges* e *MonthlyCharges*, decidiamo di escludere una delle due variabili e teniamo per l'analisi la variabile *MonthlyCharges*.
 
 Ragionamento simile per le variabili *Phoneservice* e *MultipleLines* nel quale la seconda è inevitabilmente legata ai valori assunti dalla prima. Decidiamo così di includere nell'analisi solo la variabile *Phoneservice*.
 
 Lo stesso ragionamento è stato effettuato per quanto riguarda il legame tra la variabile *InternetService* e le variabili *OnlineSecurity*, *OnlineBackup*, *DeviceProtection*, *TechSupport*, *StreamingTV*, *StreamingMovies*. Anche in questo caso decidiamo di tenere in considerazione esclusivamente la variabile *InternetService* poichè i valori assunti dalle altre variabili risultano influenzati dai valori di quest'ultima.
 
-
 # Analisi di Regressione
 
-L'analisi di regressione viene effetuata cercando di prevedere i valori assunti dalla variabile *tenure* mediante l'utilizzo delle altre variabili rimaste come regressori. 
-
+L'analisi di regressione viene effetuata cercando di prevedere i valori assunti dalla variabile *tenure* mediante l'utilizzo delle altre variabili rimaste come regressori.
 
 ```{r, echo=FALSE }
 data <- subset(data,select=-c(customerID, Churn, MultipleLines, OnlineSecurity, OnlineBackup, DeviceProtection, TotalCharges, TechSupport, StreamingTV, StreamingMovies))
@@ -194,7 +180,6 @@ split <- sample(nrow(data), floor(0.7*nrow(data)))
 traindf <- data[split,]
 testdf <-  data[-split,]
 ```
-
 
 ## Albero di regressione
 
@@ -208,14 +193,13 @@ fit <- rpart(
 )
 ```
 
-
 ```{r, echo=FALSE}
 rpart.plot(fit)
 ```
 
 La variabile che decreta il primo split (cioè la variaile che retituisce la più grande riduzione nel SSE) è *Contract*.
 
-Visualizzando il modello ad albero con *rpart.plot()*, una cosa che si può notare è che l'albero contiene 6 nodi interni e 7 risultanti nodi terminali. 
+Visualizzando il modello ad albero con *rpart.plot()*, una cosa che si può notare è che l'albero contiene 6 nodi interni e 7 risultanti nodi terminali.
 
 Di default *rpart()* automaticamente applica un range di valori di cost complexity (*cp* values) per potare l'albero. Per confrontare l'errore associato a ciascun *cp* value, *rpart()* performa un 10-fold CV.
 
@@ -223,8 +207,7 @@ Di default *rpart()* automaticamente applica un range di valori di cost complexi
 plotcp(fit)
 ```
 
-Il grafico di pruning complexity parameter (*cp*) illustra il relativo cross validation error (y-axis) per vari cp values (lower x-axis). Piccoli valori di *cp* portano ad alberi più grandi (upper x-axis). 
-Dal precedente grafico si può notare come un valore ottimale di *cp* è **0.031**, offrendo un buon bilanciamento tra complessità del modello e relativo errore.
+Il grafico di pruning complexity parameter (*cp*) illustra il relativo cross validation error (y-axis) per vari cp values (lower x-axis). Piccoli valori di *cp* portano ad alberi più grandi (upper x-axis). Dal precedente grafico si può notare come un valore ottimale di *cp* è **0.031**, offrendo un buon bilanciamento tra complessità del modello e relativo errore.
 
 ```{r}
 pruned <- prune(fit, cp=0.031)
@@ -254,21 +237,17 @@ fit$variable.importance %>%
 
 Dal precedente grafico, che illustra l'importanza che le varie features hanno nello spiegare il comportamento della variabile target, sono sicuramente da evidenziare le variabili *Contract*, *PaymentMethod* e *MonthlyCharges*.
 
-In conclusione, gli alberi decisionali hanno diversi vantaggi: 
-- richiedono poco pre-processing, questo non vuol dire che il feature engineering non migliori le prestazioni del modello, ma piuttosto che non ci sono particolari requisiti di pre-processing;
-- Solitamente gli outliers non distorgono tanto i risultati;
-- Gli alberi decisionali possono facilmente gestire categorical features senza pre-processing. 
+In conclusione, gli alberi decisionali hanno diversi vantaggi: - richiedono poco pre-processing, questo non vuol dire che il feature engineering non migliori le prestazioni del modello, ma piuttosto che non ci sono particolari requisiti di pre-processing; - Solitamente gli outliers non distorgono tanto i risultati; - Gli alberi decisionali possono facilmente gestire categorical features senza pre-processing.
 
 Tuttavia, essi spesso non riescono a raggiungere ottimi risultati in termini di performance.
 
-
 ## Bagging
 
-I Bootstrap aggregating (*bagging*) prediction models sono un metodo generale per addestrare molteplici versioni di un modello di previsione e poi combinando (ensembling) i vari risultati in una previsione aggregata. 
+I Bootstrap aggregating (*bagging*) prediction models sono un metodo generale per addestrare molteplici versioni di un modello di previsione e poi combinando (ensembling) i vari risultati in una previsione aggregata.
 
-La performance ottimale è spesso trovata unendo 50–500 alberi. Dataset con pochi previsori richiedono spesso meno alberi; mentre i set di dati con molto rumore o più predittori forti potrebbero aver bisogno di più alberi.  
+La performance ottimale è spesso trovata unendo 50--500 alberi. Dataset con pochi previsori richiedono spesso meno alberi; mentre i set di dati con molto rumore o più predittori forti potrebbero aver bisogno di più alberi.
 
-Per questa analisi decidiamo di utilizzare 100 alberi non potati (non potando gli alberi stiamo mantenendo una bassa distorsione ma un elevata varianza ed è in questo caso che è possibile ottenere un effetto maggiore dal bagging). Una cosa da notare è che tipicamente, più alberi vengono utilizzati e migliore saranno la prestazioni del modello di bagging, dal momento che aggiungendo più alberi mediamo tra più modelli decisionali ad elevata varianza. Tipicamente, l'errore di previsione si appiattisce e si stabilizza una volta raggiunto un numero adeguato di alberi. Spesso, sono necessari circa 50–100 alberi per stabilizzare l'errore (in altri casi sono necessari 500 o più).
+Per questa analisi decidiamo di utilizzare 100 alberi non potati (non potando gli alberi stiamo mantenendo una bassa distorsione ma un elevata varianza ed è in questo caso che è possibile ottenere un effetto maggiore dal bagging). Una cosa da notare è che tipicamente, più alberi vengono utilizzati e migliore saranno la prestazioni del modello di bagging, dal momento che aggiungendo più alberi mediamo tra più modelli decisionali ad elevata varianza. Tipicamente, l'errore di previsione si appiattisce e si stabilizza una volta raggiunto un numero adeguato di alberi. Spesso, sono necessari circa 50--100 alberi per stabilizzare l'errore (in altri casi sono necessari 500 o più).
 
 ```{r}
 set.seed(1234)
@@ -283,7 +262,6 @@ bag_model <- train(
 bag_model
 ```
 
-
 ```{r, echo=FALSE}
 cs_preds_bag <- bind_cols(
    Predicted = predict(bag_model, newdata = testdf),
@@ -291,10 +269,10 @@ cs_preds_bag <- bind_cols(
 )
 (cs_rmse_bag <- RMSE(pred = cs_preds_bag$Predicted, obs = cs_preds_bag$Actual))
 ```
-Il mean squared error ottenuto dal nostro modello risulta pari a  **16.58**.
 
+Il mean squared error ottenuto dal nostro modello risulta pari a **16.58**.
 
-Sfortunatamente, per via del processo di bagging, modelli come gli alberi decisionali che sono percepiti come interpretabili e visualizzabili adesso non lo sono più. Tuttavia, possiamo ancora fare inferenza su come le varie features influenzano il nostro modello. Per i bagged decision trees, questo processo è simile a quello degli alberi decisionali. Per ciascun albero, si calcola la somma delle funziona di perdita fra tutti gli split. Dopodiché per ciascuna features si aggrega questa misura per tutti gli alberi. Le features con la più grande riduzione nel SSE (per la regressione) sono considerate importanti. 
+Sfortunatamente, per via del processo di bagging, modelli come gli alberi decisionali che sono percepiti come interpretabili e visualizzabili adesso non lo sono più. Tuttavia, possiamo ancora fare inferenza su come le varie features influenzano il nostro modello. Per i bagged decision trees, questo processo è simile a quello degli alberi decisionali. Per ciascun albero, si calcola la somma delle funziona di perdita fra tutti gli split. Dopodiché per ciascuna features si aggrega questa misura per tutti gli alberi. Le features con la più grande riduzione nel SSE (per la regressione) sono considerate importanti.
 
 ```{r, echo=FALSE}
 plot(varImp(bag_model), main="Variable Importance with Bagging")
@@ -313,5 +291,4 @@ Confrontando il root mean squared error del modello di bagging con quello ottenu
 
 # Conclusioni
 
-Il processo di *bagging* migliora l'accuratezza delle previsioni per modelli ad elevata varianza (e basso bias) a spese dell'interpretabilità e della velocità computazionale. Tuttavia, usando vari algoritmi e strumenti di interpretabilità, possiamo ancora fare inferenza su come il nostro bagged model sfrutta la feature information. Inoltre, dal momento che il bagging consiste in una serie di processi indipendenti, l'algoritmo risulta facilmente parallelizzabile.
-Tuttavia, con il processo di bagging degli alberi un problema continua a sussistere. Nonostante il modello esegue i vari step in maniera indipendente, gli alberi nel processo di bagging non sono completamente indipendenti tra di loro, dal momento che tutte le features sono considerate ad ogni split di ogni albero. Di conseguenza, alberi provenienti da diversi bootstrap samples hanno una struttura simile fra loro (specialmente nella parte iniziale dell'albero) a causa di eventuali relazioni forti sottostanti. Questa caratteristica è conosciuta come **tree correlation** e previene il *bagging* da ridurre ulteriormente la varianza del base learner. Gli algoritmi di Random forest estendono e migliorano i bagged decision trees riducendo questa correlazione e migliorando così la precisione dell'insieme complessivo.
+Il processo di *bagging* migliora l'accuratezza delle previsioni per modelli ad elevata varianza (e basso bias) a spese dell'interpretabilità e della velocità computazionale. Tuttavia, usando vari algoritmi e strumenti di interpretabilità, possiamo ancora fare inferenza su come il nostro bagged model sfrutta la feature information. Inoltre, dal momento che il bagging consiste in una serie di processi indipendenti, l'algoritmo risulta facilmente parallelizzabile. Tuttavia, con il processo di bagging degli alberi un problema continua a sussistere. Nonostante il modello esegue i vari step in maniera indipendente, gli alberi nel processo di bagging non sono completamente indipendenti tra di loro, dal momento che tutte le features sono considerate ad ogni split di ogni albero. Di conseguenza, alberi provenienti da diversi bootstrap samples hanno una struttura simile fra loro (specialmente nella parte iniziale dell'albero) a causa di eventuali relazioni forti sottostanti. Questa caratteristica è conosciuta come **tree correlation** e previene il *bagging* da ridurre ulteriormente la varianza del base learner. Gli algoritmi di Random forest estendono e migliorano i bagged decision trees riducendo questa correlazione e migliorando così la precisione dell'insieme complessivo.
